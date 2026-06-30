@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Send Mail – WebPower</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .mailer-wrap { max-width: 660px; margin: 40px auto; padding: 0 16px; }
+  .mailer-card { background: var(--card, #fff); border: 1px solid var(--border, #e2e8f0);
+                 border-radius: 12px; padding: 32px; }
+  .mailer-card h2 { margin: 0 0 24px; font-size: 1.25rem; }
+  .m-field { margin-bottom: 16px; }
+  .m-field label { display: block; font-size: .8rem; font-weight: 600;
+                   color: #64748b; margin-bottom: 6px; letter-spacing: .04em; text-transform: uppercase; }
+  .m-field input, .m-field textarea {
+    width: 100%; box-sizing: border-box; padding: 9px 12px;
+    border: 1px solid var(--border, #e2e8f0); border-radius: 8px;
+    font-size: .95rem; font-family: inherit; background: var(--bg, #f8fafc);
+    color: inherit; resize: vertical; }
+  .m-field input:focus, .m-field textarea:focus {
+    outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+  .m-field textarea { min-height: 220px; }
+  .file-label { display: inline-flex; align-items: center; gap: 8px;
+                padding: 8px 14px; border: 1px dashed var(--border, #cbd5e1);
+                border-radius: 8px; cursor: pointer; font-size: .9rem;
+                color: #64748b; transition: border-color .15s; }
+  .file-label:hover { border-color: #6366f1; color: #6366f1; }
+  .file-label input { display: none; }
+  #fileNames { font-size: .82rem; color: #64748b; margin-top: 6px; }
+  .send-row { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+  #sendBtn { padding: 10px 28px; background: #6366f1; color: #fff;
+             border: none; border-radius: 8px; font-size: .95rem; font-weight: 600;
+             cursor: pointer; transition: background .15s; }
+  #sendBtn:hover:not(:disabled) { background: #4f46e5; }
+  #sendBtn:disabled { opacity: .55; cursor: not-allowed; }
+  #statusMsg { font-size: .9rem; }
+  .ok  { color: #16a34a; }
+  .err { color: #dc2626; }
+  .result-list { margin-top: 16px; list-style: none; padding: 0; }
+  .result-list li { padding: 6px 10px; border-radius: 6px; font-size: .88rem;
+                    margin-bottom: 4px; }
+  .result-list li.sent { background: #dcfce7; color: #166534; }
+  .result-list li.fail { background: #fee2e2; color: #991b1b; }
+  .back-link { display: inline-block; margin-bottom: 20px; font-size: .9rem;
+               color: #6366f1; text-decoration: none; }
+  .back-link:hover { text-decoration: underline; }
+  .from-badge { display: inline-block; padding: 5px 10px; background: #f1f5f9;
+                border-radius: 6px; font-size: .88rem; color: #475569; }
+</style>
+</head>
+<body>
+<div class="mailer-wrap">
+  <a href="/" class="back-link">← Back to Business Finder</a>
+  <div class="mailer-card">
+    <h2>Send Mail</h2>
+
+    <div class="m-field">
+      <label>From</label>
+      <span class="from-badge">WebPower Business &lt;business@webpower.blog&gt;</span>
+    </div>
+
+    <div class="m-field">
+      <label>To <span style="font-weight:400;text-transform:none">(one per line, or comma-separated)</span></label>
+      <textarea id="toField" rows="3" placeholder="jordanarizanov@gmail.com&#10;krstev_kire@yahoo.com">jordanarizanov@gmail.com
+krstev_kire@yahoo.com</textarea>
+    </div>
+
+    <div class="m-field">
+      <label>Subject</label>
+      <input type="text" id="subjectField" placeholder="Enter subject…" value="Hello from WebPower">
+    </div>
+
+    <div class="m-field">
+      <label>Message</label>
+      <textarea id="bodyField" placeholder="Write your message here…"></textarea>
+    </div>
+
+    <div class="m-field">
+      <label>Attachments</label>
+      <label class="file-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </svg>
+        Choose files
+        <input type="file" id="attachInput" multiple>
+      </label>
+      <div id="fileNames">No files chosen</div>
+    </div>
+
+    <div class="send-row">
+      <button id="sendBtn">Send</button>
+      <span id="statusMsg"></span>
+    </div>
+
+    <ul class="result-list" id="resultList"></ul>
+  </div>
+</div>
+
+<script>
+const attachInput = document.getElementById('attachInput');
+const fileNames   = document.getElementById('fileNames');
+const sendBtn     = document.getElementById('sendBtn');
+const statusMsg   = document.getElementById('statusMsg');
+const resultList  = document.getElementById('resultList');
+
+attachInput.addEventListener('change', () => {
+  const names = Array.from(attachInput.files).map(f => f.name);
+  fileNames.textContent = names.length ? names.join(', ') : 'No files chosen';
+});
+
+sendBtn.addEventListener('click', async () => {
+  const to      = document.getElementById('toField').value.trim();
+  const subject = document.getElementById('subjectField').value.trim();
+  const body    = document.getElementById('bodyField').value.trim();
+
+  if (!to || !subject || !body) {
+    statusMsg.className = 'err';
+    statusMsg.textContent = 'Please fill in To, Subject, and Message.';
+    return;
+  }
+
+  sendBtn.disabled = true;
+  statusMsg.className = '';
+  statusMsg.textContent = 'Sending…';
+  resultList.innerHTML = '';
+
+  const fd = new FormData();
+  fd.append('to',      to);
+  fd.append('subject', subject);
+  fd.append('body',    body);
+  for (const f of attachInput.files) fd.append('attachments', f);
+
+  try {
+    const res  = await fetch('/api/send-mail', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.results) {
+      for (const [addr, status] of Object.entries(data.results)) {
+        const li = document.createElement('li');
+        li.className = status === 'sent' ? 'sent' : 'fail';
+        li.textContent = status === 'sent'
+          ? `✓  ${addr} — delivered`
+          : `✗  ${addr} — ${status}`;
+        resultList.appendChild(li);
+      }
+    }
+
+    if (data.ok) {
+      statusMsg.className = 'ok';
+      statusMsg.textContent = 'All messages sent successfully.';
+      attachInput.value = '';
+      fileNames.textContent = 'No files chosen';
+    } else {
+      statusMsg.className = 'err';
+      statusMsg.textContent = data.error || 'Some messages failed.';
+    }
+  } catch (e) {
+    statusMsg.className = 'err';
+    statusMsg.textContent = 'Network error: ' + e.message;
+  } finally {
+    sendBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

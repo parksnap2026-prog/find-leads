@@ -1,0 +1,24 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.env.*
+!.env.example
+
+# Next.js (web/)
+web/node_modules/
+web/.next/
+web/out/
+web/.vercel
+web/*.tsbuildinfo
+
+# misc
+.DS_Store
+*.pem
+logoWebPower.png~
+
+# local user data
+web/data/users/
+web/data/users.json

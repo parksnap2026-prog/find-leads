@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Templates — WebPower</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* ── Page layout ── */
+    .tpl-page { max-width: 1600px; margin: 0 auto; padding: 28px 24px 60px; }
+    .tpl-page-header { display: flex; align-items: flex-start; margin-bottom: 20px; }
+    .tpl-page-header h1 { font-size: 1.35rem; font-weight: 700; }
+    .tpl-page-header p  { color: var(--muted); font-size: .85rem; margin-top: 3px; }
+
+    .tokens-legend {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 16px; margin-bottom: 22px; font-size: .82rem; color: var(--muted);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    }
+    .tokens-legend strong { color: var(--text); margin-right: 4px; }
+    .token-chip {
+      display: inline-block; background: #312e81; color: var(--accent-h);
+      border-radius: 4px; padding: 1px 7px; font-weight: 600;
+      font-family: monospace; font-size: .83rem;
+    }
+
+    /* ── Template card ── */
+    .tpl-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 20px; overflow: hidden;
+    }
+    .tpl-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      cursor: pointer; user-select: none;
+    }
+    .tpl-header:hover { background: var(--surface2); }
+    .tpl-dot   { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .tpl-header h2 { font-size: .95rem; font-weight: 700; flex: 1; color: var(--text); }
+    .tpl-desc  { font-size: .8rem; color: var(--muted); }
+    .tpl-caret { color: var(--muted); transition: transform .2s; }
+    .tpl-card.open .tpl-caret { transform: rotate(180deg); }
+
+    .tpl-body { display: none; padding: 20px; }
+    .tpl-card.open .tpl-body { display: block; }
+
+    /* ── Variant tabs ── */
+    .variant-tabs { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; margin-bottom: 8px; }
+    .variant-tab-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .variant-covers { font-size: .68rem; color: var(--muted); text-align: center; max-width: 110px; line-height: 1.3; }
+    .variant-tab {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 13px; border-radius: 20px; font-size: .78rem; font-weight: 600;
+      border: 1.5px solid var(--border); background: var(--surface2); color: var(--muted);
+      cursor: pointer; transition: all .15s;
+    }
+    .variant-tab:hover { border-color: var(--accent); color: var(--accent); }
+    .variant-tab.active { border-color: var(--tpl-color, var(--accent)); background: var(--tpl-color, var(--accent)); color: #fff; }
+    .variant-tab .del-v { opacity: .6; font-size: .9rem; line-height: 1; cursor: pointer; margin-left: 2px; }
+    .variant-tab .del-v:hover { opacity: 1; }
+    .btn-add-variant {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 20px; font-size: .78rem; font-weight: 600;
+      border: 1.5px dashed var(--border); background: transparent; color: var(--muted);
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-add-variant:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Editor + preview ── */
+    .editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 900px) { .editor-row { grid-template-columns: 1fr; } }
+
+    .editor-panel label, .preview-panel label {
+      display: block; font-size: .75rem; font-weight: 700; color: var(--muted);
+      margin-bottom: 5px; text-transform: uppercase; letter-spacing: .05em;
+    }
+    .editor-panel input, .editor-panel textarea {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 9px 13px; font-size: .88rem; font-family: inherit; color: var(--text);
+      resize: vertical; transition: border-color .15s;
+    }
+    .editor-panel input:focus, .editor-panel textarea:focus {
+      outline: none; border-color: var(--accent);
+    }
+    .editor-panel textarea { min-height: 360px; line-height: 1.6; }
+    .subject-row { margin-bottom: 12px; }
+
+    .preview-box {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      min-height: 500px; overflow: hidden; display: flex; flex-direction: column;
+    }
+    .preview-subject {
+      padding: 10px 15px; border-bottom: 1px solid var(--border);
+      font-weight: 700; font-size: .88rem; color: var(--text);
+      background: var(--surface2); border-radius: 8px 8px 0 0; flex-shrink: 0;
+    }
+    .preview-body {
+      padding: 15px; font-size: .87rem; line-height: 1.7;
+      color: var(--muted); white-space: pre-wrap; word-break: break-word; flex: 1;
+    }
+    .preview-iframe {
+      width: 100%; flex: 1; border: none; min-height: 500px;
+      border-radius: 0 0 8px 8px; background: #fff;
+    }
+    .placeholder {
+      color: var(--accent-h); font-weight: 700;
+      background: rgba(99,102,241,.18); border-radius: 3px; padding: 0 3px;
+    }
+
+    /* ── Save row ── */
+    .tpl-actions {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
+    }
+    .btn-tpl-save {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 18px; background: var(--accent); color: #fff; border: none;
+      border-radius: 8px; font-size: .88rem; font-weight: 600; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-tpl-save:hover:not(:disabled) { background: #4f46e5; }
+    .btn-tpl-save:disabled { opacity: .5; cursor: not-allowed; }
+    .save-status { font-size: .83rem; }
+    .save-status.ok  { color: var(--green); }
+    .save-status.err { color: var(--red); }
+
+    /* ── Add-variant modal ── */
+    .av-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .av-modal-backdrop.hidden { display: none; }
+    .av-modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; width: 400px;
+      box-shadow: var(--shadow);
+    }
+    .av-modal h3 { font-size: .95rem; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+    .av-modal select {
+      width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: .88rem; margin-bottom: 16px;
+      background: var(--bg); color: var(--text);
+    }
+    .av-modal select:focus { outline: none; border-color: var(--accent); }
+    .av-modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  </style>
+</head>
+<body>
+
+<!-- topbar matches main page exactly -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="https://webpower.blog" target="_blank" rel="noopener" class="logo" style="text-decoration:none">
+      <img src="/static/logoWebPower.png" alt="WebPower" height="36" style="display:block;width:auto">
+    </a>
+    <a href="/" style="display:inline-flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;color:var(--accent);text-decoration:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+      </svg>
+      Back to search
+    </a>
+    <a href="/history" class="btn-icon" title="Search History" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </a>
+    <a href="/activity" class="btn-icon" title="Activity Log" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    </a>
+  </div>
+</header>
+
+<!-- Add-variant modal -->
+<div class="av-modal-backdrop hidden" id="avModal">
+  <div class="av-modal">
+    <h3>Add variant for business type</h3>
+    <select id="avSelect"></select>
+    <div class="av-modal-btns">
+      <button class="btn-secondary" id="avCancel">Cancel</button>
+      <button class="btn-primary" id="avConfirm">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="tpl-page">
+  <div class="tpl-page-header">
+    <div>
+      <h1>Email Templates</h1>
+      <p>Edit subject and body per template and per business type. Specific variants override the group default when composing.</p>
+    </div>
+  </div>
+
+  <div class="tokens-legend">
+    <strong>Placeholders:</strong>
+    <span class="token-chip">{{NAME}}</span> business name &nbsp;
+    <span class="token-chip">{{CITY}}</span> city &nbsp;
+    <span class="token-chip">{{TYPE}}</span> business type label
+  </div>
+
+  <div id="templateCards"></div>
+</div>
+
+<script>
+{% raw %}
+'use strict';
+
+const SAMPLE = { NAME: 'Acme Bakery', CITY: 'Manchester', TYPE: 'bakery' };
+
+const GROUP_LABELS = {
+  beauty:'Beauty (group)', food_beverage:'Food & Beverage (group)',
+  health:'Health (group)', automotive:'Automotive (group)',
+  retail:'Retail (group)', professional:'Professional (group)',
+  hospitality:'Hospitality (group)', education:'Education (group)',
+};
+const TYPE_CATEGORY = {
+  hair_salon:'beauty', beauty_salon:'beauty', nail_salon:'beauty', spa:'beauty',
+  bakery:'food_beverage', restaurant:'food_beverage', cafe:'food_beverage', bar:'food_beverage',
+  gym:'health', dentist:'health', doctor:'health', hospital:'health', veterinary_care:'health', pharmacy:'health',
+  car_repair:'automotive',
+  florist:'retail', pet_store:'retail', clothing_store:'retail', electronics_store:'retail',
+  supermarket:'retail', furniture_store:'retail', hardware_store:'retail', laundry:'retail',
+  real_estate_agency:'professional', travel_agency:'professional', accounting:'professional',
+  lawyer:'professional', insurance_agency:'professional',
+  hotel:'hospitality', school:'education',
+};
+
+// Map group → list of business type keys it covers
+const GROUP_MEMBERS = {
+  beauty:        ['hair_salon','beauty_salon','nail_salon','spa'],
+  food_beverage: ['bakery','restaurant','cafe','bar'],
+  health:        ['gym','dentist','doctor','hospital','veterinary_care','pharmacy'],
+  automotive:    ['car_repair'],
+  retail:        ['florist','pet_store','clothing_store','electronics_store','supermarket','furniture_store','hardware_store','laundry'],
+  professional:  ['real_estate_agency','travel_agency','accounting','lawyer','insurance_agency'],
+  hospitality:   ['hotel'],
+  education:     ['school'],
+};
+
+function variantLabel(key, businessTypes) {
+  if (key === 'default') return 'Default';
+  if (GROUP_LABELS[key]) return GROUP_LABELS[key];
+  return (businessTypes && businessTypes[key]) || key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+}
+
+function variantCoversText(key, businessTypes) {
+  if (key === 'default') return 'All businesses (fallback)';
+  if (GROUP_MEMBERS[key]) {
+    return GROUP_MEMBERS[key]
+      .map(k => (businessTypes && businessTypes[k]) || k.replace(/_/g,' '))
+      .join(', ');
+  }
+  // Specific business type — check if it's in a group
+  const group = TYPE_CATEGORY[key];
+  const label = (businessTypes && businessTypes[key]) || key.replace(/_/g,' ');
+  return group ? `${label} only (overrides ${GROUP_LABELS[group]||group})` : label + ' only';
+}
+function escHtml(s) {
+  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function highlightTokens(text) {
+  return escHtml(text).replace(/\{\{(NAME|CITY|TYPE)\}\}/g,'<span class="placeholder">{{$1}}</span>');
+}
+function applyTokens(text) {
+  return text.replace(/\{\{NAME\}\}/g,SAMPLE.NAME).replace(/\{\{CITY\}\}/g,SAMPLE.CITY).replace(/\{\{TYPE\}\}/g,SAMPLE.TYPE);
+}
+function renderPreview(card, subject, body) {
+  card.querySelector('.preview-subject').textContent = applyTokens(subject);
+  const isHtml = body.trimStart().startsWith('<');
+  const bodyEl = card.querySelector('.preview-body');
+  let iframe    = card.querySelector('.preview-iframe');
+
+  if (isHtml) {
+    bodyEl.style.display = 'none';
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.className = 'preview-iframe';
+      iframe.sandbox   = 'allow-same-origin';
+      bodyEl.parentNode.appendChild(iframe);
+    }
+    iframe.style.display = 'block';
+    // Replace cid: with static logo so preview works
+    const previewHtml = applyTokens(body).replace(/cid:logo_webpower/g, '/static/logoWebPower.png');
+    iframe.srcdoc = previewHtml;
+  } else {
+    bodyEl.style.display = '';
+    bodyEl.innerHTML = highlightTokens(body);
+    if (iframe) iframe.style.display = 'none';
+  }
+}
+
+// ── Add-variant modal ─────────────────────────────────────────────────────────
+let _avCb = null;
+const avModal  = document.getElementById('avModal');
+const avSelect = document.getElementById('avSelect');
+document.getElementById('avCancel').addEventListener('click', () => avModal.classList.add('hidden'));
+document.getElementById('avConfirm').addEventListener('click', () => {
+  if (_avCb && avSelect.value) _avCb(avSelect.value);
+  avModal.classList.add('hidden');
+});
+
+function openAddVariant(existingKeys, businessTypes, cb) {
+  avSelect.innerHTML = '';
+  Object.entries(businessTypes).forEach(([k, label]) => {
+    if (k === 'all' || existingKeys.includes(k)) return;
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = label + (TYPE_CATEGORY[k] ? ` — ${GROUP_LABELS[TYPE_CATEGORY[k]]||TYPE_CATEGORY[k]}` : '');
+    avSelect.appendChild(opt);
+  });
+  if (!avSelect.options.length) { alert('All business types already have a variant.'); return; }
+  _avCb = cb;
+  avModal.classList.remove('hidden');
+}
+
+// ── Main loader ───────────────────────────────────────────────────────────────
+async function loadTemplates() {
+  const [tplRes, cfgRes] = await Promise.all([fetch('/api/templates/full'), fetch('/api/config')]);
+  const tpls        = await tplRes.json();
+  const cfg         = await cfgRes.json();
+  const businessTypes = cfg.business_types || {};
+  const container   = document.getElementById('templateCards');
+
+  tpls.forEach(tpl => {
+    const card = document.createElement('div');
+    card.className = 'tpl-card open';
+    card.style.setProperty('--tpl-color', tpl.color || '#6366f1');
+
+    card.innerHTML = `
+      <div class="tpl-header">
+        <span class="tpl-dot" style="background:${escHtml(tpl.color||'#6366f1')}"></span>
+        <h2>${escHtml(tpl.label)}</h2>
+        <span class="tpl-desc">${escHtml(tpl.description||'')}</span>
+        <span class="tpl-caret">▾</span>
+      </div>
+      <div class="tpl-body">
+        <div class="variant-tabs" id="tabs-${escHtml(tpl.id)}"></div>
+        <div class="editor-row">
+          <div class="editor-panel">
+            <div class="subject-row"><label>Subject</label><input type="text" class="subj-input"></div>
+            <label>Body</label>
+            <textarea class="body-input"></textarea>
+          </div>
+          <div class="preview-panel">
+            <label>Preview</label>
+            <div class="preview-box">
+              <div class="preview-subject"></div>
+              <div class="preview-body"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tpl-actions">
+          <button class="btn-tpl-save">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Save
+          </button>
+          <span class="save-status"></span>
+        </div>
+      </div>
+    `;
+
+    card.querySelector('.tpl-header').addEventListener('click', () => card.classList.toggle('open'));
+
+    const tabsEl    = card.querySelector(`#tabs-${tpl.id}`);
+    const subjInput = card.querySelector('.subj-input');
+    const bodyInput = card.querySelector('.body-input');
+    const statusEl  = card.querySelector('.save-status');
+
+    const variantData = { default: { subject: tpl.default.subject, body: tpl.default.body } };
+    Object.entries(tpl.variants||{}).forEach(([k,v]) => { variantData[k] = { subject:v.subject, body:v.body }; });
+
+    let currentVariant = 'default';
+
+    const updatePreview = () => renderPreview(card, subjInput.value, bodyInput.value);
+    subjInput.addEventListener('input', updatePreview);
+    bodyInput.addEventListener('input', updatePreview);
+
+    function switchVariant(key) {
+      variantData[currentVariant] = { subject: subjInput.value, body: bodyInput.value };
+      currentVariant = key;
+      tabsEl.querySelectorAll('.variant-tab').forEach(t => t.classList.toggle('active', t.dataset.v === key));
+      const vd = variantData[key];
+      subjInput.value = vd.subject;
+      bodyInput.value = vd.body;
+      updatePreview();
+      statusEl.textContent = '';
+    }
+
+    function buildTabs() {
+      tabsEl.innerHTML = '';
+      Object.keys(variantData).forEach(key => {
+        const tab = document.createElement('button');
+        tab.className = 'variant-tab' + (key === currentVariant ? ' active' : '');
+        tab.dataset.v = key;
+        tab.innerHTML = escHtml(variantLabel(key, businessTypes)) +
+          (key !== 'default' ? ` <span class="del-v" data-k="${escHtml(key)}" title="Delete">×</span>` : '');
+        tab.addEventListener('click', e => { if (!e.target.classList.contains('del-v')) switchVariant(key); });
+        if (key !== 'default') {
+          tab.querySelector('.del-v').addEventListener('click', async e => {
+            e.stopPropagation();
+            if (!confirm(`Delete variant "${variantLabel(key, businessTypes)}"?`)) return;
+            const r = await fetch(`/api/templates/${tpl.id}`, {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ delete_variant: key }),
+            });
+            if ((await r.json()).ok) {
+              delete variantData[key];
+              if (currentVariant === key) switchVariant('default');
+              buildTabs();
+              statusEl.textContent = '✓ Variant deleted'; statusEl.className = 'save-status ok';
+              setTimeout(() => { statusEl.textContent=''; }, 2500);
+            }
+          });
+        }
+
+        // Wrap tab + covers hint
+        const covers = document.createElement('div');
+        covers.className = 'variant-covers';
+        covers.textContent = variantCoversText(key, businessTypes);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'variant-tab-wrap';
+        wrap.appendChild(tab);
+        wrap.appendChild(covers);
+        tabsEl.appendChild(wrap);
+      });
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'btn-add-variant';
+      addBtn.textContent = '+ Add variant';
+      addBtn.addEventListener('click', () => {
+        openAddVariant(Object.keys(variantData), businessTypes, newKey => {
+          const groupKey = TYPE_CATEGORY[newKey];
+          const base = variantData[groupKey] || variantData.default;
+          variantData[newKey] = { subject: base.subject, body: base.body };
+          buildTabs();
+          switchVariant(newKey);
+        });
+      });
+      tabsEl.appendChild(addBtn);
+    }
+
+    buildTabs();
+    subjInput.value = variantData.default.subject;
+    bodyInput.value = variantData.default.body;
+    updatePreview();
+
+    card.querySelector('.btn-tpl-save').addEventListener('click', async () => {
+      variantData[currentVariant] = { subject: subjInput.value, body: bodyInput.value };
+      const btn = card.querySelector('.btn-tpl-save');
+      btn.disabled = true; statusEl.textContent = 'Saving…'; statusEl.className = 'save-status';
+
+      const payload = { subject: variantData.default.subject, body: variantData.default.body, variants: {} };
+      Object.entries(variantData).forEach(([k,v]) => { if (k!=='default') payload.variants[k]={subject:v.subject,body:v.body}; });
+
+      try {
+        const r = await fetch(`/api/templates/${tpl.id}`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload),
+        });
+        const d = await r.json();
+        if (d.ok) { statusEl.textContent='✓ Saved'; statusEl.className='save-status ok'; }
+        else { statusEl.textContent=d.error||'Error'; statusEl.className='save-status err'; }
+      } catch(e) {
+        statusEl.textContent='Network error'; statusEl.className='save-status err';
+      } finally {
+        btn.disabled = false;
+        setTimeout(()=>{ statusEl.textContent=''; }, 3000);
+      }
+    });
+
+    container.appendChild(card);
+  });
+}
+
+loadTemplates().catch(e => {
+  document.getElementById('templateCards').innerHTML =
+    `<p style="color:var(--red);padding:20px">Failed to load templates: ${e.message}</p>`;
+});
+{% endraw %}
+</script>
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Search History — WebPower</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; margin: 0; }
+
+    .hist-page { max-width: 1400px; margin: 0 auto; padding: 24px 20px 60px; }
+
+    .hist-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+    .hist-header h1 { margin: 0; font-size: 1.4rem; font-weight: 700; }
+
+    .hist-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+    .hist-filters input, .hist-filters select {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      padding: 7px 12px; border-radius: 8px; font-size: .875rem; outline: none;
+    }
+    .hist-filters input:focus, .hist-filters select:focus { border-color: var(--accent); }
+    .hist-filters input { width: 180px; }
+
+    .hist-stats { font-size: .8rem; color: var(--muted); margin-bottom: 16px; }
+
+    .hist-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+    table.hist-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    table.hist-table th {
+      background: var(--surface2); color: var(--muted); font-weight: 600;
+      padding: 10px 14px; text-align: left; white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    table.hist-table td {
+      padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle;
+    }
+    table.hist-table tr:last-child td { border-bottom: none; }
+    table.hist-table tr:hover td { background: var(--surface); }
+
+    .badge-count {
+      display: inline-block; background: var(--accent); color: #fff;
+      font-size: .72rem; font-weight: 700; border-radius: 20px; padding: 2px 8px;
+    }
+    .badge-count.zero { background: var(--surface2); color: var(--muted); }
+
+    .btn-rerun {
+      background: var(--accent); color: #fff; border: none; border-radius: 7px;
+      padding: 5px 12px; font-size: .78rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; display: inline-block; line-height: 1.4;
+    }
+    .btn-rerun:hover { opacity: .85; }
+    .btn-del {
+      background: transparent; border: 1px solid #ef4444; color: #ef4444;
+      border-radius: 7px; padding: 5px 10px; font-size: .78rem; cursor: pointer;
+      line-height: 1.4;
+    }
+    .btn-del:hover { background: #ef4444; color: #fff; }
+    .btn-clear-all {
+      background: transparent; border: 1px solid #ef4444; color: #ef4444;
+      border-radius: 8px; padding: 7px 16px; font-size: .82rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-clear-all:hover { background: #ef4444; color: #fff; }
+
+    .btn-export {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 7px 14px; font-size: .82rem; font-weight: 600;
+      text-decoration: none; cursor: pointer;
+    }
+    .btn-export:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-export-call:hover { border-color: #22c55e; color: #22c55e; }
+
+    .empty-hist { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-hist svg { opacity: .35; margin-bottom: 12px; }
+    .empty-hist p { margin: 4px 0; }
+    .empty-hist .sub { font-size: .82rem; }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="https://webpower.blog" target="_blank" rel="noopener" class="logo" style="text-decoration:none">
+      <img src="/static/logoWebPower.png" alt="WebPower" height="36" style="display:block;width:auto">
+    </a>
+    <a href="/" style="display:inline-flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;color:var(--accent);text-decoration:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+      </svg>
+      Back to search
+    </a>
+    <a href="/templates" class="btn-icon" title="Edit Templates" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    </a>
+    <a href="/activity" class="btn-icon" title="Activity Log" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    </a>
+  </div>
+</header>
+
+<div class="hist-page">
+  <div class="hist-header">
+    <h1>Search History</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <a href="/api/export/email-log" class="btn-export" title="Download all sent emails as CSV">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Email Log (CSV)
+      </a>
+      <a href="/api/export/call-log" class="btn-export btn-export-call" title="Download all calls as CSV">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Call Log (CSV)
+      </a>
+      <button class="btn-clear-all" id="clearAllBtn">Clear all history</button>
+    </div>
+  </div>
+
+  <div class="hist-filters">
+    <input type="text" id="filterCity" placeholder="Filter by city…">
+    <input type="text" id="filterCountry" placeholder="Filter by country…">
+    <input type="text" id="filterType" placeholder="Filter by business type…">
+  </div>
+
+  <div class="hist-stats" id="histStats"></div>
+
+  <div class="hist-table-wrap" id="histTableWrap">
+    <div class="empty-hist" id="emptyHist" style="display:none">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <p>No searches yet</p>
+      <p class="sub">Every search you run will be saved here</p>
+    </div>
+    <table class="hist-table" id="histTable">
+      <thead>
+        <tr>
+          <th>Date &amp; Time</th>
+          <th>Business Type</th>
+          <th>City</th>
+          <th>Country</th>
+          <th>Radius</th>
+          <th>Results</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="histBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function () {
+  let history = [];
+
+  const filterCity    = document.getElementById('filterCity');
+  const filterCountry = document.getElementById('filterCountry');
+  const filterType    = document.getElementById('filterType');
+  const histBody      = document.getElementById('histBody');
+  const histStats     = document.getElementById('histStats');
+  const emptyHist     = document.getElementById('emptyHist');
+  const histTable     = document.getElementById('histTable');
+  const clearAllBtn   = document.getElementById('clearAllBtn');
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { day:'2-digit', month:'short', year:'numeric' })
+         + ' ' + d.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+  }
+
+  function fmtRadius(m) {
+    return (m / 1000).toFixed(0) + ' km';
+  }
+
+  function rerunUrl(entry) {
+    const p = new URLSearchParams({
+      country: entry.countryCode || '',
+      city:    entry.city || '',
+      type:    entry.businessType || '',
+      radius:  entry.radius || 20000,
+    });
+    return '/?' + p.toString();
+  }
+
+  function render() {
+    const qCity    = filterCity.value.trim().toLowerCase();
+    const qCountry = filterCountry.value.trim().toLowerCase();
+    const qType    = filterType.value.trim().toLowerCase();
+
+    const filtered = history.filter(e => {
+      if (qCity    && !(e.city         || '').toLowerCase().includes(qCity))    return false;
+      if (qCountry && !((e.countryName || '') + ' ' + (e.countryCode || '')).toLowerCase().includes(qCountry)) return false;
+      if (qType    && !(e.businessLabel || e.businessType || '').toLowerCase().includes(qType)) return false;
+      return true;
+    });
+
+    histStats.textContent = filtered.length === history.length
+      ? `${history.length} search${history.length !== 1 ? 'es' : ''} saved`
+      : `${filtered.length} of ${history.length} searches`;
+
+    if (!history.length) {
+      emptyHist.style.display = 'block';
+      histTable.style.display = 'none';
+      return;
+    }
+    emptyHist.style.display = 'none';
+    histTable.style.display = '';
+
+    histBody.innerHTML = filtered.map((e, idx) => {
+      const count = e.resultCount ?? 0;
+      return `<tr>
+        <td style="white-space:nowrap;color:var(--muted);font-size:.78rem">${esc(fmtDate(e.searchedAt))}</td>
+        <td><strong>${esc(e.businessLabel || e.businessType || '—')}</strong></td>
+        <td>${esc(e.city || '—')}</td>
+        <td>${esc(e.countryName || e.countryCode || '—')}</td>
+        <td style="color:var(--muted)">${esc(fmtRadius(e.radius || 20000))}</td>
+        <td><span class="badge-count${count === 0 ? ' zero' : ''}">${count}</span></td>
+        <td style="display:flex;gap:6px;align-items:center">
+          <a href="${esc(rerunUrl(e))}" class="btn-rerun">Re-run</a>
+          <button class="btn-del" data-idx="${idx}">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // Delete buttons
+    histBody.querySelectorAll('.btn-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = parseInt(btn.dataset.idx);
+        const filtered2 = getFiltered();
+        const entry = filtered2[i];
+        deleteEntry(entry.id);
+      });
+    });
+  }
+
+  function getFiltered() {
+    const qCity    = filterCity.value.trim().toLowerCase();
+    const qCountry = filterCountry.value.trim().toLowerCase();
+    const qType    = filterType.value.trim().toLowerCase();
+    return history.filter(e => {
+      if (qCity    && !(e.city         || '').toLowerCase().includes(qCity))    return false;
+      if (qCountry && !((e.countryName || '') + ' ' + (e.countryCode || '')).toLowerCase().includes(qCountry)) return false;
+      if (qType    && !(e.businessLabel || e.businessType || '').toLowerCase().includes(qType)) return false;
+      return true;
+    });
+  }
+
+  async function deleteEntry(id) {
+    history = history.filter(h => h.id !== id);
+    await fetch('/api/history/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
+    render();
+  }
+
+  async function save() {
+    await fetch('/api/history/replace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(history),
+    }).catch(() => {});
+  }
+
+  clearAllBtn.addEventListener('click', async () => {
+    if (!history.length) return;
+    if (!confirm(`Delete all ${history.length} search history entries?`)) return;
+    history = [];
+    await save();
+    render();
+  });
+
+  filterCity.addEventListener('input', render);
+  filterCountry.addEventListener('input', render);
+  filterType.addEventListener('input', render);
+
+  // Load from server
+  histStats.textContent = 'Loading…';
+  fetch('/api/history')
+    .then(r => r.json())
+    .then(data => { history = data || []; render(); })
+    .catch(() => { histStats.textContent = 'Failed to load history'; });
+})();
+</script>
+</body>
+</html>
