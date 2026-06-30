@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { readUserEmailLogs, readUserMailSettings, writeUserEmailLogs } from "@/lib/db/local";
+import { readUserMailSettings } from "@/lib/db/local";
+import { prependEmailLogs } from "@/lib/db/user-activity";
 import { composeMessage } from "@/lib/compose";
 import { getMailContactContext, resolveMailFromFields } from "@/lib/mail-contact";
 import { sendSmtpPing, sendUserMail } from "@/lib/mail";
@@ -81,20 +82,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: status || "Send failed" }, { status: 400 });
     }
 
-    const logs = readUserEmailLogs(user.id);
-    logs.unshift({
-      id: crypto.randomUUID(),
-      sentAt: new Date().toISOString(),
-      businessName: "Test email",
-      emailAddress: to,
-      template: template_id,
-      subject: composed.subject,
-      city: ctx.city,
-      country: "",
-      businessType: ctx.businessType,
-      testReal: "Test",
-    });
-    writeUserEmailLogs(user.id, logs.slice(0, 500));
+    await prependEmailLogs(user.id, [
+      {
+        id: crypto.randomUUID(),
+        sentAt: new Date().toISOString(),
+        businessName: "Test email",
+        emailAddress: to,
+        template: template_id,
+        subject: composed.subject,
+        city: ctx.city,
+        country: "",
+        businessType: ctx.businessType,
+        testReal: "Test",
+      },
+    ]);
 
     return NextResponse.json({ ok: true, to, subject: composed.subject });
   } catch (e) {

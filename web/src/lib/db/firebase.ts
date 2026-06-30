@@ -1,14 +1,18 @@
-/**
- * Firebase adapter stub — wire up when STORAGE_PROVIDER=firebase and env vars are set.
- * See .env.example for required variables.
- */
-import { isFirebaseReady } from "./index";
+import { getStorageProvider, isFirebaseReady } from "./index";
+import { activityStorageBackend } from "./user-activity";
 
 export function getFirebaseStatus() {
+  const ready = isFirebaseReady();
+  const provider = getStorageProvider();
+
   return {
-    ready: isFirebaseReady(),
-    message: isFirebaseReady()
-      ? "Firebase env vars detected — adapter can be enabled"
-      : "Using local file storage",
+    ready,
+    provider,
+    activity: activityStorageBackend(),
+    message: ready
+      ? provider === "firebase"
+        ? "Firebase connected — search history, call activity & email logs use Firestore"
+        : "Firebase env vars set — set STORAGE_PROVIDER=firebase to enable Firestore activity"
+      : "Using local file storage for all data",
   };
 }

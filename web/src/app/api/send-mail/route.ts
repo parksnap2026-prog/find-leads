@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import {
-  readUserEmailLogs,
-  readUserMailSettings,
-  writeUserEmailLogs,
-} from "@/lib/db/local";
+import { readUserMailSettings } from "@/lib/db/local";
+import { prependEmailLogs } from "@/lib/db/user-activity";
 import { sendUserMail } from "@/lib/mail";
 import type { EmailLogEntry } from "@/lib/db/types";
 
@@ -39,12 +36,12 @@ export async function POST(req: Request) {
   }
 
   const results = await sendUserMail(user.id, settings, { to: recipients, subject, body });
-  const logs = readUserEmailLogs(user.id);
   const now = new Date().toISOString();
+  const newLogs: EmailLogEntry[] = [];
 
   for (const addr of recipients) {
     if (results[addr] === "sent") {
-      logs.unshift({
+      newLogs.push({
         id: crypto.randomUUID(),
         sentAt: now,
         businessName: bizName,
@@ -59,6 +56,6 @@ export async function POST(req: Request) {
     }
   }
 
-  writeUserEmailLogs(user.id, logs.slice(0, 500));
+  await prependEmailLogs(user.id, newLogs);
   return NextResponse.json({ ok: true, results });
 }

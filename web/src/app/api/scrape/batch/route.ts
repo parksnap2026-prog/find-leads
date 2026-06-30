@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { scrapeWebsite } from "@/lib/scrape";
+import { MAX_ENRICHMENT_SELECTION } from "@/lib/constants";
 
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -28,10 +29,10 @@ export async function POST(req: Request) {
   const body = await req.json();
   const urls = (body.urls as string[]) ?? [];
   if (!urls.length) {
-    return NextResponse.json({ error: "urls required" }, { status: 400 });
+    return NextResponse.json({ error: "urls required — pass selected row websites only" }, { status: 400 });
   }
 
-  const unique = [...new Set(urls.filter(Boolean))].slice(0, 50);
+  const unique = [...new Set(urls.filter(Boolean))].slice(0, MAX_ENRICHMENT_SELECTION);
   const out: Record<string, Awaited<ReturnType<typeof scrapeWebsite>>> = {};
 
   const pairs = await mapWithConcurrency(unique, 2, async (url) => {

@@ -5,7 +5,7 @@ import { Download, Filter, Globe, Mail, Search, Share2, X } from "lucide-react";
 import { SearchForm, type SearchFormValues } from "@/components/finder/SearchForm";
 import { ResultsTable } from "@/components/finder/ResultsTable";
 import { ComposeModal } from "@/components/finder/ComposeModal";
-import { BUSINESS_TYPES } from "@/lib/constants";
+import { BUSINESS_TYPES, MAX_ENRICHMENT_SELECTION } from "@/lib/constants";
 import { leadLinkForExport } from "@/lib/lead-links";
 import { isSocialMediaUrl } from "@/lib/website-url";
 import {
@@ -167,9 +167,9 @@ export function FinderClient() {
       return;
     }
 
-    const withSite = items.filter(
-      (b) => b.website && !isSocialMediaUrl(b.website) && !b.email,
-    );
+    const withSite = items
+      .filter((b) => b.website && !isSocialMediaUrl(b.website) && !b.email)
+      .slice(0, MAX_ENRICHMENT_SELECTION);
     if (!withSite.length) {
       setActionMessage("Selected rows have no website to scrape, or already have email.");
       return;
@@ -229,7 +229,7 @@ export function FinderClient() {
         return;
       }
 
-      const targets = items.filter((b) => !b.isListing).slice(0, 20);
+      const targets = items.filter((b) => !b.isListing).slice(0, MAX_ENRICHMENT_SELECTION);
       if (!targets.length) {
         setActionMessage("Selected rows cannot be checked (MBL store listings only).");
         return;
@@ -325,7 +325,7 @@ export function FinderClient() {
         return;
       }
 
-      const missing = items.filter((r) => !r.website && !r.isListing).slice(0, 20);
+      const missing = items.filter((r) => !r.website && !r.isListing).slice(0, MAX_ENRICHMENT_SELECTION);
       if (!missing.length) {
         setActionMessage("Selected rows already have a website link.");
         return;
@@ -622,7 +622,8 @@ export function FinderClient() {
             </p>
           ) : (
             <p className="text-sm text-slate-500">
-              Check rows in the table, then use Guess websites or Check social on those businesses only.
+              Select rows in the table first. Guess websites, Check social, and Find emails only run on
+              your selection (max {MAX_ENRICHMENT_SELECTION} at a time) — never the full result list.
             </p>
           )}
 

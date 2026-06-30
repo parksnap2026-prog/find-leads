@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import {
-  readUserCallAudit,
-  readUserCallLogState,
-  writeUserCallAudit,
-  writeUserCallLogState,
-} from "@/lib/db/local";
+  readCallLogState,
+  writeCallLogState,
+  prependCallAudit,
+} from "@/lib/db/user-activity";
 import type { CallLogEntry } from "@/lib/db/types";
 
 export async function GET() {
   const user = await requireUser();
-  return NextResponse.json(readUserCallLogState(user.id));
+  return NextResponse.json(await readCallLogState(user.id));
 }
 
 export async function POST(req: Request) {
@@ -20,7 +19,7 @@ export async function POST(req: Request) {
   if (!bizId) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   const called = Boolean(body.called);
-  const state = readUserCallLogState(user.id);
+  const state = await readCallLogState(user.id);
 
   if (called) {
     state[bizId] = {
@@ -37,9 +36,8 @@ export async function POST(req: Request) {
   } else {
     delete state[bizId];
   }
-  writeUserCallLogState(user.id, state);
+  await writeCallLogState(user.id, state);
 
-  const audit = readUserCallAudit(user.id);
   const entry: CallLogEntry = {
     id: crypto.randomUUID(),
     calledAt: new Date().toISOString(),
@@ -50,8 +48,7 @@ export async function POST(req: Request) {
     city: String(body.city ?? ""),
     country: String(body.country ?? ""),
   };
-  audit.unshift(entry);
-  writeUserCallAudit(user.id, audit.slice(0, 500));
+  await prependCallAudit(user.id, entry);
 
   return NextResponse.json({ ok: true });
 }

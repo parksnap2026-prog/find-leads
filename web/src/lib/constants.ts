@@ -2,6 +2,9 @@ export const APP_NAME = "MyBusinessesLeads";
 export const APP_SHORT = "MBL";
 export const APP_TAGLINE = "Find, qualify, and reach local businesses — faster.";
 
+/** Max rows per manual enrichment action (guess / social / email scrape). */
+export const MAX_ENRICHMENT_SELECTION = 20;
+
 export const BUSINESS_TYPES: Record<string, string> = {
   all: "All Business Types",
   hair_salon: "Hair Salon",

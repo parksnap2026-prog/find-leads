@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { findSocialByQuery } from "@/lib/find-query";
 import { scrapeWebsite } from "@/lib/scrape";
-
-const MAX_ITEMS = 20;
+import { MAX_ENRICHMENT_SELECTION } from "@/lib/constants";
 
 export async function POST(req: Request) {
   await requireUser();
@@ -12,7 +11,7 @@ export async function POST(req: Request) {
   const scrape = body.scrape !== false;
 
   const trimmed = items
-    .slice(0, MAX_ITEMS)
+    .slice(0, MAX_ENRICHMENT_SELECTION)
     .map((item: { id?: string; name?: string; city?: string; country?: string; social?: string }) => ({
       id: String(item.id ?? ""),
       name: String(item.name ?? "").trim(),

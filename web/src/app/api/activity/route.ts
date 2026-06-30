@@ -1,20 +1,20 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import {
-  readUserCallAudit,
-  readUserEmailLogs,
-  writeUserCallAudit,
-  writeUserEmailLogs,
-} from "@/lib/db/local";
+  readCallAudit,
+  readEmailLogs,
+  deleteCallAuditEntry,
+  deleteEmailLogEntry,
+} from "@/lib/db/user-activity";
 
 export async function GET(req: Request) {
   const user = await requireUser();
   const type = new URL(req.url).searchParams.get("type") ?? "emails";
 
   if (type === "calls") {
-    return NextResponse.json(readUserCallAudit(user.id));
+    return NextResponse.json(await readCallAudit(user.id));
   }
-  return NextResponse.json(readUserEmailLogs(user.id));
+  return NextResponse.json(await readEmailLogs(user.id));
 }
 
 export async function DELETE(req: Request) {
@@ -26,11 +26,9 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   if (type === "calls") {
-    const logs = readUserCallAudit(user.id).filter((l) => l.id !== id);
-    writeUserCallAudit(user.id, logs);
+    await deleteCallAuditEntry(user.id, id);
   } else {
-    const logs = readUserEmailLogs(user.id).filter((l) => l.id !== id);
-    writeUserEmailLogs(user.id, logs);
+    await deleteEmailLogEntry(user.id, id);
   }
 
   return NextResponse.json({ ok: true });
