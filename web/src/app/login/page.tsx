@@ -18,19 +18,26 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      setError(data.error || "Login failed");
-      return;
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(
+          (data as { error?: string }).error || `Login failed (${res.status})`,
+        );
+        return;
+      }
+      router.push(next);
+      router.refresh();
+    } catch {
+      setError("Network error — could not reach the server");
+    } finally {
+      setLoading(false);
     }
-    router.push(next);
-    router.refresh();
   }
 
   return (
