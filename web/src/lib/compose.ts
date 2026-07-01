@@ -1,5 +1,6 @@
 import { BUSINESS_TYPES } from "./constants";
 import { loadUserTemplate } from "./user-templates";
+import { TEMPLATE_PRODUCT_LABEL, TEMPLATE_PRODUCT_LINK } from "./templates";
 import {
   applyContactToTemplate,
   ensureEmailSignature,
@@ -10,7 +11,7 @@ import type { MailSettings } from "./db/types";
 
 async function fillTemplate(
   text: string,
-  vars: { name: string; city: string; type: string },
+  vars: { name: string; city: string; type: string; productLink: string; productLabel: string },
   mail?: MailSettings | null,
   userId?: string,
   userName?: string,
@@ -35,6 +36,8 @@ async function fillTemplate(
     .replace(/\{\{NAME\}\}/g, vars.name)
     .replace(/\{\{CITY\}\}/g, vars.city)
     .replace(/\{\{TYPE\}\}/g, vars.type)
+    .replace(/\{\{PRODUCT_LINK\}\}/g, vars.productLink)
+    .replace(/\{\{PRODUCT_LABEL\}\}/g, vars.productLabel)
     .replace(/\[Your Name\]/g, fromName)
     .replace(/\[Your Company\]/g, companyName)
     .replace(/\[Your Email\]/g, fromEmail);
@@ -70,6 +73,8 @@ export async function composeMessage(
     name: input.name.trim() || "your business",
     city: input.city.trim() || "your city",
     type: typeLabel,
+    productLink: TEMPLATE_PRODUCT_LINK[input.template_id] || "",
+    productLabel: TEMPLATE_PRODUCT_LABEL[input.template_id] || "",
   };
 
   const uid = contactUserId ?? userId;

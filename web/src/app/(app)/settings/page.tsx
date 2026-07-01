@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, Image, Mail, Save, Send, Server, Trash2 } from "lucide-react";
-import { injectLogoForPreview, fetchEmailLogoDataUrl, logoPreviewUrl } from "@/lib/logo-preview";
+import { Eye, Image, Mail, Save, Send, Server } from "lucide-react";
+import { injectLogoForPreview, fetchEmailLogoDataUrl, STATIC_EMAIL_LOGO_URL } from "@/lib/logo-preview";
 
 interface TemplateOption {
   id: string;
@@ -32,17 +32,8 @@ export default function SettingsPage() {
   const [passwordSaved, setPasswordSaved] = useState(false);
 
   async function loadLogo() {
-    const meta = await fetch("/api/logo")
-      .then((r) => r.json())
-      .catch(() => null);
-    if (!meta?.hasLogo) {
-      setHasLogo(false);
-      setLogoThumbUrl(null);
-      setLogoDataUrl(null);
-      return;
-    }
     setHasLogo(true);
-    setLogoThumbUrl(logoPreviewUrl(undefined, meta.version));
+    setLogoThumbUrl(STATIC_EMAIL_LOGO_URL);
     const dataUrl = await fetchEmailLogoDataUrl();
     setLogoDataUrl(dataUrl);
   }
@@ -121,29 +112,6 @@ export default function SettingsPage() {
   useEffect(() => {
     if (testTemplateId) loadPreview();
   }, [testTemplateId, loadPreview]);
-
-  async function uploadLogo(file: File) {
-    const fd = new FormData();
-    fd.append("logo", file);
-    const res = await fetch("/api/logo", { method: "POST", body: fd });
-    const data = await res.json();
-    if (res.ok) {
-      setHasLogo(true);
-      await loadLogo();
-      setSaved("Logo uploaded — used in email templates");
-      loadPreview();
-    } else {
-      setSaved(data.error || "Logo upload failed");
-    }
-  }
-
-  async function removeLogo() {
-    await fetch("/api/logo", { method: "DELETE" });
-    setHasLogo(false);
-    setLogoThumbUrl(null);
-    setLogoDataUrl(null);
-    setSaved("Logo removed");
-  }
 
   async function saveMail(test = false) {
     setLoading(true);
@@ -243,46 +211,19 @@ export default function SettingsPage() {
           <div>
             <h2 className="font-semibold text-slate-900">Email logo</h2>
             <p className="text-sm text-slate-500">
-              Shown in outreach emails. Uploading a logo in My Store also updates this automatically.
+              Fixed app logo used in all outreach emails (public/email-logo.png in the repo).
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          {logoThumbUrl ? (
-            <img
-              src={logoThumbUrl}
-              alt="Your logo"
-              className="h-16 w-auto rounded-lg border border-slate-200 bg-white p-2"
-            />
-          ) : (
-            <div className="flex h-16 w-32 items-center justify-center rounded-lg border border-dashed border-slate-200 text-xs text-slate-400">
-              No logo
-            </div>
-          )}
-          <div className="flex gap-2">
-            <label className="cursor-pointer rounded-xl bg-[#007BFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0047AB]">
-              Upload logo
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) uploadLogo(f);
-                }}
-              />
-            </label>
-            {hasLogo && (
-              <button
-                type="button"
-                onClick={removeLogo}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" />
-                Remove
-              </button>
-            )}
-          </div>
+          <img
+            src={logoThumbUrl ?? STATIC_EMAIL_LOGO_URL}
+            alt="Email logo"
+            className="h-16 w-auto rounded-lg border border-slate-200 bg-white p-2"
+          />
+          <p className="text-sm text-slate-500">
+            To change the logo, replace <code className="text-xs">web/public/email-logo.png</code> and redeploy.
+          </p>
         </div>
       </section>
 

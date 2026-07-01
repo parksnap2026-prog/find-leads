@@ -3,7 +3,20 @@ import path from "path";
 import type { MessageTemplate } from "@/types";
 
 const TEMPLATES_DIR = path.join(process.cwd(), "data", "templates");
-const ORDER = ["free_demo_website", "create_build", "update_maintain", "ai_agent"];
+export const BUILTIN_TEMPLATE_ORDER = ["free_demo_website", "ai_agent"] as const;
+export type BuiltinTemplateId = (typeof BUILTIN_TEMPLATE_ORDER)[number];
+
+export const BUILTIN_TEMPLATE_IDS = new Set<string>(BUILTIN_TEMPLATE_ORDER);
+
+export const TEMPLATE_PRODUCT_LINK: Record<string, string> = {
+  free_demo_website: "https://webpower.blog",
+  ai_agent: "https://receptionsit.com",
+};
+
+export const TEMPLATE_PRODUCT_LABEL: Record<string, string> = {
+  free_demo_website: "webpower.blog",
+  ai_agent: "receptionsit.com",
+};
 
 export function loadTemplates(): MessageTemplate[] {
   if (!fs.existsSync(TEMPLATES_DIR)) return [];
@@ -17,16 +30,12 @@ export function loadTemplates(): MessageTemplate[] {
     loaded[raw.id] = raw;
   }
 
-  const ordered = ORDER.filter((id) => loaded[id]).map((id) => ({
+  const ordered = BUILTIN_TEMPLATE_ORDER.filter((id) => loaded[id]).map((id) => ({
     id: loaded[id].id,
     label: loaded[id].label,
     description: loaded[id].description,
     color: loaded[id].color,
   }));
 
-  const rest = Object.values(loaded)
-    .filter((t) => !ORDER.includes(t.id))
-    .map(({ id, label, description, color }) => ({ id, label, description, color }));
-
-  return [...ordered, ...rest];
+  return ordered;
 }

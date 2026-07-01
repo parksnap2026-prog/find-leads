@@ -25,7 +25,7 @@ With `STORAGE_PROVIDER=local` on Vercel, **all** local data is lost on redeploy.
 ## Firebase setup
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).
-2. Enable **Firestore** (Native mode) and **Storage**.
+2. Enable **Firestore** (Native mode).
 3. Project settings → Service accounts → **Generate new private key**.
 4. Set env vars in Vercel (see below) and set `STORAGE_PROVIDER=firebase`.
 5. Deploy security rules:
@@ -84,9 +84,9 @@ Verify after deploy: `GET /api/health` — check `firebaseActivity: true`.
 
 ## Logo (email)
 
-- Logo is stored per user at `data/users/{userId}/logo.png`.
-- Upload in **Settings → Email logo**.
-- On Vercel without persistent disk, re-upload after each deploy.
+- Logo is **static** at `web/public/email-logo.png` (committed in git).
+- Used in all outreach emails via `cid:logo_webpower`.
+- To change it, replace that file and redeploy — no upload UI or Firebase Storage needed.
 
 ## Pre-deploy checklist
 

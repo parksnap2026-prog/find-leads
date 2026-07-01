@@ -2,13 +2,7 @@ import fs from "fs";
 import path from "path";
 import { getStorageProvider, isFirebaseReady } from "@/lib/db";
 import * as firebaseListings from "@/lib/db/firebase-listings";
-import {
-  deleteUserFile,
-  readUserFile,
-  saveUserFile,
-} from "@/lib/db/firebase-storage";
 import { readUsersFile } from "@/lib/db/local";
-import { saveUserLogo } from "@/lib/logo";
 import { normalizeWebsiteUrl } from "@/lib/website-url";
 import type { BusinessResult } from "@/types";
 
@@ -53,10 +47,6 @@ function listingDir(userId: string) {
 
 function listingPath(userId: string) {
   return path.join(userDir(userId), "listing.json");
-}
-
-function listingPhotoSubpath(filename: string) {
-  return `listing/${filename}`;
 }
 
 function normalizeListing(data: UserListing & { photos?: string[] }): UserListing {
@@ -140,12 +130,6 @@ export async function readListingPhoto(
   userId: string,
   filename: string,
 ): Promise<{ buffer: Buffer; mime: string } | null> {
-  if (useFirebaseStore()) {
-    const buffer = await readUserFile(userId, listingPhotoSubpath(filename));
-    if (!buffer) return null;
-    return { buffer, mime: photoMime(filename) };
-  }
-
   const filepath = listingPhotoPath(userId, filename);
   if (!fs.existsSync(filepath)) return null;
   return {
@@ -182,24 +166,20 @@ async function saveListing(listing: UserListing) {
 async function writeImageFile(userId: string, buffer: Buffer, mime: string, prefix: string) {
   const ext = mime === "image/jpeg" ? ".jpg" : mime === "image/webp" ? ".webp" : ".png";
   const filename = `${prefix}-${Date.now()}${ext}`;
-
-  if (useFirebaseStore()) {
-    await saveUserFile(userId, listingPhotoSubpath(filename), buffer, mime);
-    return filename;
-  }
-
   const dir = listingDir(userId);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, filename), buffer);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, filename), buffer);
+  } catch (e) {
+    throw new Error(
+      e instanceof Error ? e.message : "Photo storage unavailable on this host",
+    );
+  }
   return filename;
 }
 
 async function deleteImageFile(userId: string, filename: string | null) {
   if (!filename) return;
-  if (useFirebaseStore()) {
-    await deleteUserFile(userId, listingPhotoSubpath(filename));
-    return;
-  }
   const fp = listingPhotoPath(userId, filename);
   if (fs.existsSync(fp)) fs.unlinkSync(fp);
 }
@@ -212,10 +192,8 @@ function listingUsesFile(listing: UserListing, filename: string) {
   );
 }
 
-async function syncListingLogoToEmailLogo(userId: string, listingLogoFilename: string) {
-  const photo = await readListingPhoto(userId, listingLogoFilename);
-  if (!photo) return;
-  await saveUserLogo(userId, photo.buffer, photo.mime);
+async function syncListingLogoToEmailLogo(_userId: string, _listingLogoFilename: string) {
+  /* Email logo is static — public/email-logo.png */
 }
 
 export async function addListingPhoto(

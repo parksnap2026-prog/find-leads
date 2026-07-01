@@ -2,14 +2,16 @@
 
 const LOGO_CID_RE = /cid:logo_(?:webpower|mbl)/gi;
 
-export function logoPreviewUrl(_origin?: string, version?: number | null) {
-  const v = version ?? Date.now();
-  return `/api/logo/file?v=${v}`;
+/** Static logo shipped with the app (public/email-logo.png). */
+export const STATIC_EMAIL_LOGO_URL = "/email-logo.png";
+
+export function logoPreviewUrl(_origin?: string, _version?: number | null) {
+  return STATIC_EMAIL_LOGO_URL;
 }
 
 export function injectLogoForPreview(html: string, logoSrc: string | null) {
-  if (!logoSrc) return html;
-  return html.replace(LOGO_CID_RE, logoSrc);
+  const src = logoSrc || STATIC_EMAIL_LOGO_URL;
+  return html.replace(LOGO_CID_RE, src);
 }
 
 export function logoCidsInHtml(html: string): string[] {
@@ -20,14 +22,13 @@ export function logoCidsInHtml(html: string): string[] {
   return [...cids];
 }
 
-/** Load the logged-in user's email logo as a data: URL (works in preview iframes). */
 export async function fetchEmailLogoDataUrl(): Promise<string | null> {
   try {
     const res = await fetch("/api/logo/data");
-    if (!res.ok) return null;
+    if (!res.ok) return STATIC_EMAIL_LOGO_URL;
     const data = (await res.json()) as { hasLogo?: boolean; dataUrl?: string };
-    return data.hasLogo && data.dataUrl ? data.dataUrl : null;
+    return data.hasLogo && data.dataUrl ? data.dataUrl : STATIC_EMAIL_LOGO_URL;
   } catch {
-    return null;
+    return STATIC_EMAIL_LOGO_URL;
   }
 }

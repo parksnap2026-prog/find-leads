@@ -3,18 +3,14 @@
 import { useEffect, useState } from "react";
 import {
   Code2,
-  Copy,
   Eye,
   EyeOff,
-  FilePlus2,
   FileText,
   Monitor,
   Save,
-  Trash2,
   Type,
 } from "lucide-react";
 import { RichTextEditor } from "@/components/templates/RichTextEditor";
-import { injectLogoForPreview, fetchEmailLogoDataUrl } from "@/lib/logo-preview";
 
 interface TemplateMeta {
   id: string;
@@ -36,18 +32,7 @@ export default function TemplatesPage() {
   const [body, setBody] = useState("");
   const [editMode, setEditMode] = useState<EditMode>("visual");
   const [showPreview, setShowPreview] = useState(true);
-  const [newLabel, setNewLabel] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [duplicating, setDuplicating] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [saved, setSaved] = useState("");
-  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
-
-  async function loadLogo() {
-    const dataUrl = await fetchEmailLogoDataUrl();
-    setLogoDataUrl(dataUrl);
-  }
 
   async function loadTemplates() {
     const res = await fetch("/api/templates");
@@ -58,7 +43,6 @@ export default function TemplatesPage() {
 
   useEffect(() => {
     loadTemplates();
-    loadLogo();
   }, []);
 
   async function openEditor(id: string) {
@@ -86,126 +70,23 @@ export default function TemplatesPage() {
     }
   }
 
-  async function createTemplate() {
-    if (!newLabel.trim()) return;
-    setCreating(true);
-    setSaved("");
-    try {
-      const res = await fetch("/api/templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: newLabel, description: newDescription }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSaved(data.error || "Failed to create template");
-        return;
-      }
-      setNewLabel("");
-      setNewDescription("");
-      await loadTemplates();
-      await openEditor(data.template.id);
-      setSaved("Template created");
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function duplicateTemplate() {
-    if (!editing) return;
-    setDuplicating(true);
-    setSaved("");
-    try {
-      const res = await fetch("/api/templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          duplicateFrom: editing.id,
-          label: `${editing.label} Copy`,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSaved(data.error || "Failed to duplicate");
-        return;
-      }
-      await loadTemplates();
-      await openEditor(data.template.id);
-      setSaved("Template duplicated");
-    } finally {
-      setDuplicating(false);
-    }
-  }
-
-  async function deleteTemplate() {
-    if (!editing) return;
-    if (!window.confirm(`Delete "${editing.label}"? This cannot be undone.`)) return;
-    setDeleting(true);
-    setSaved("");
-    try {
-      const res = await fetch(`/api/templates/${editing.id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) {
-        setSaved(data.error || "Failed to delete");
-        return;
-      }
-      setEditing(null);
-      setSubject("");
-      setBody("");
-      await loadTemplates();
-      setSaved("Template deleted");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  const previewHtml = injectLogoForPreview(body, logoDataUrl);
+  const previewHtml = body;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-[#1e1b4b]">Templates</h1>
         <p className="mt-1 text-slate-600">
-          Design outreach emails — visual editor, raw HTML, and full preview.
+          Edit the two outreach templates used when emailing leads.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur-xl">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-          <FilePlus2 className="h-5 w-5 text-indigo-600" />
-          New template
-        </h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            placeholder="Template name"
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-          />
-          <input
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            placeholder="Description (optional)"
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-          />
-        </div>
-        <button
-          type="button"
-          disabled={creating || !newLabel.trim()}
-          onClick={createTemplate}
-          className="mt-3 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          <FilePlus2 className="h-4 w-4" />
-          {creating ? "Creating…" : "Create template"}
-        </button>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         {templates.length === 0 ? (
           <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-white/50 p-10 text-center">
             <FileText className="mx-auto h-10 w-10 text-slate-300" />
             <p className="mt-3 font-medium text-slate-700">No templates yet</p>
-            <p className="mt-1 text-sm text-slate-500">Create your first outreach template above.</p>
+            <p className="mt-1 text-sm text-slate-500">Built-in templates could not be loaded.</p>
           </div>
         ) : (
           templates.map((tpl) => (
@@ -319,12 +200,9 @@ export default function TemplatesPage() {
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                 <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-3">
                   <Monitor className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm font-semibold text-slate-700">Full email preview</span>
-                  {!logoDataUrl && (
-                    <span className="text-xs text-amber-600">Upload logo in Settings to show it here</span>
-                  )}
+                  <span className="text-sm font-semibold text-slate-700">Email preview</span>
                   <span className="ml-auto text-xs text-slate-400">
-                    Placeholders: {"{{NAME}}"}, {"{{CITY}}"}, {"{{TYPE}}"}
+                    Placeholders: {"{{NAME}}"}, {"{{CITY}}"}, {"{{TYPE}}"}, {"{{PRODUCT_LINK}}"}
                   </span>
                 </div>
                 <div className="bg-[#eef2f7] p-4 sm:p-6">
@@ -356,24 +234,6 @@ export default function TemplatesPage() {
               >
                 <Save className="h-4 w-4" />
                 Save template
-              </button>
-              <button
-                type="button"
-                disabled={duplicating}
-                onClick={duplicateTemplate}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              >
-                <Copy className="h-4 w-4" />
-                {duplicating ? "Duplicating…" : "Duplicate"}
-              </button>
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={deleteTemplate}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-              >
-                <Trash2 className="h-4 w-4" />
-                {deleting ? "Deleting…" : "Delete"}
               </button>
               {saved && (
                 <span className="ml-2 text-sm font-medium text-emerald-600">{saved}</span>

@@ -1,6 +1,5 @@
 import type { UserListing } from "@/lib/listings";
 import { getFirebaseDb } from "./firebase-admin";
-import { deleteUserFile } from "./firebase-storage";
 
 const STORES = "stores";
 
@@ -16,18 +15,7 @@ export async function writeListing(listing: UserListing): Promise<UserListing> {
 }
 
 export async function deleteListing(userId: string) {
-  const listing = await readListing(userId);
   await getFirebaseDb().collection(STORES).doc(userId).delete();
-  if (!listing) return;
-
-  const files = new Set<string>();
-  if (listing.coverPhoto) files.add(listing.coverPhoto);
-  if (listing.logoPhoto) files.add(listing.logoPhoto);
-  listing.photos.forEach((p) => files.add(p));
-
-  await Promise.all(
-    [...files].map((filename) => deleteUserFile(userId, `listing/${filename}`)),
-  );
 }
 
 export async function loadPublishedListings(): Promise<UserListing[]> {
