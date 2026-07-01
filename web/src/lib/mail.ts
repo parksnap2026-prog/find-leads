@@ -1,7 +1,4 @@
-import path from "path";
 import nodemailer from "nodemailer";
-import { readUserLogoBuffer } from "@/lib/logo";
-import { logoCidsInHtml } from "@/lib/logo-preview";
 import {
   createMailTransport,
   smtpFromAddress,
@@ -11,6 +8,11 @@ import {
 } from "@/lib/mail-transport";
 import { resolveMailFromFields } from "@/lib/mail-contact";
 import type { MailSettings } from "@/lib/db/types";
+
+/** Remove inline logo placeholders from HTML emails — outreach is plain text only. */
+function stripEmailLogosFromHtml(html: string): string {
+  return html.replace(/<img\b[^>]*\bsrc=["']cid:logo[^"']*["'][^>]*>/gi, "");
+}
 
 function formatSmtpError(e: unknown): string {
   if (!(e instanceof Error)) return "Send failed";
@@ -61,8 +63,8 @@ export async function sendUserMail(
   const fromAddr = smtpFromAddress(resolved);
 
   const isHtml = input.body.trimStart().startsWith("<");
+  const htmlBody = isHtml ? stripEmailLogosFromHtml(input.body) : input.body;
   const results: Record<string, string> = {};
-  const logoAsset = await readUserLogoBuffer(userId);
 
   const domain = smtpMessageDomain(resolved);
 
@@ -81,18 +83,8 @@ export async function sendUserMail(
       };
 
       if (isHtml) {
-        mailOptions.html = input.body;
-        mailOptions.text = input.body.replace(/<[^>]+>/g, " ");
-        if (logoAsset) {
-          const ext = path.extname(logoAsset.filepath) || ".png";
-          mailOptions.attachments = logoCidsInHtml(input.body).map((cid) => ({
-            filename: `logo${ext}`,
-            content: logoAsset.buffer,
-            contentType: logoAsset.mime,
-            cid,
-            contentDisposition: "inline" as const,
-          }));
-        }
+        mailOptions.html = htmlBody;
+        mailOptions.text = htmlBody.replace(/<[^>]+>/g, " ");
       } else {
         mailOptions.text = input.body;
       }

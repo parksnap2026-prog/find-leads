@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, Image, Mail, Save, Send, Server } from "lucide-react";
-import { injectLogoForPreview, fetchEmailLogoDataUrl, STATIC_EMAIL_LOGO_URL } from "@/lib/logo-preview";
+import { useCallback, useEffect, useState } from "react";
+import { Eye, Mail, Save, Send, Server } from "lucide-react";
 
 interface TemplateOption {
   id: string;
@@ -20,9 +19,6 @@ export default function SettingsPage() {
   const [contactHint, setContactHint] = useState("");
   const [saved, setSaved] = useState("");
   const [loading, setLoading] = useState(false);
-  const [hasLogo, setHasLogo] = useState(false);
-  const [logoThumbUrl, setLogoThumbUrl] = useState<string | null>(null);
-  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [testTemplateId, setTestTemplateId] = useState("");
   const [testRecipient, setTestRecipient] = useState("");
@@ -30,13 +26,6 @@ export default function SettingsPage() {
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
-
-  async function loadLogo() {
-    setHasLogo(true);
-    setLogoThumbUrl(STATIC_EMAIL_LOGO_URL);
-    const dataUrl = await fetchEmailLogoDataUrl();
-    setLogoDataUrl(dataUrl);
-  }
 
   useEffect(() => {
     fetch("/api/mail-settings")
@@ -79,14 +68,9 @@ export default function SettingsPage() {
         if (list[0]?.id) setTestTemplateId(list[0].id);
       })
       .catch(() => {});
-
-    loadLogo();
   }, []);
 
-  const previewSrcDoc = useMemo(
-    () => injectLogoForPreview(previewHtml, logoDataUrl),
-    [previewHtml, logoDataUrl],
-  );
+  const previewSrcDoc = previewHtml;
 
   const loadPreview = useCallback(async () => {
     if (!testTemplateId) return;
@@ -200,32 +184,8 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-[#1e1b4b]">Settings</h1>
-        <p className="mt-1 text-slate-600">Configure your outbound mail and email logo.</p>
+        <p className="mt-1 text-slate-600">Configure your outbound mail settings.</p>
       </div>
-
-      <section className="rounded-2xl border border-white/70 bg-white/70 p-6 backdrop-blur-xl">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="rounded-lg bg-sky-100 p-2 text-[#007BFF]">
-            <Image className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-slate-900">Email logo</h2>
-            <p className="text-sm text-slate-500">
-              Fixed app logo used in all outreach emails (public/email-logo.png in the repo).
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <img
-            src={logoThumbUrl ?? STATIC_EMAIL_LOGO_URL}
-            alt="Email logo"
-            className="h-16 w-auto rounded-lg border border-slate-200 bg-white p-2"
-          />
-          <p className="text-sm text-slate-500">
-            To change the logo, replace <code className="text-xs">web/public/email-logo.png</code> and redeploy.
-          </p>
-        </div>
-      </section>
 
       <section className="rounded-2xl border border-white/70 bg-white/70 p-6 backdrop-blur-xl">
         <div className="mb-4 flex items-center gap-3">
