@@ -4,7 +4,7 @@ import { loadUserTemplates } from "@/lib/user-templates";
 
 export async function GET() {
   const user = await requireUser();
-  const templates = loadUserTemplates(user.id);
+  const templates = await loadUserTemplates(user.id);
   return NextResponse.json(
     templates.map(({ id, label, description, color }) => ({
       id,

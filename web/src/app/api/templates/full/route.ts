@@ -4,5 +4,5 @@ import { loadUserTemplates } from "@/lib/user-templates";
 
 export async function GET() {
   const user = await requireUser();
-  return NextResponse.json(loadUserTemplates(user.id));
+  return NextResponse.json(await loadUserTemplates(user.id));
 }

@@ -63,7 +63,7 @@ export async function composeMessage(
   contactUserId?: string,
   userName?: string,
 ) {
-  const tpl = loadUserTemplate(userId, input.template_id);
+  const tpl = await loadUserTemplate(userId, input.template_id);
   if (!tpl) throw new Error("Template not found");
 
   const typeLabel = (BUSINESS_TYPES[input.business_type] || input.business_type).toLowerCase();

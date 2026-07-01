@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const user = await requireUser();
   const { id } = await params;
-  const tpl = loadUserTemplate(user.id, id);
+  const tpl = await loadUserTemplate(user.id, id);
   if (!tpl) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(tpl);
 }
@@ -21,7 +21,7 @@ export async function POST(
   const { id } = await params;
   const body = await req.json();
   try {
-    const updated = saveUserTemplate(user.id, id, body);
+    const updated = await saveUserTemplate(user.id, id, body);
     return NextResponse.json({ ok: true, template: updated });
   } catch (e) {
     return NextResponse.json(
