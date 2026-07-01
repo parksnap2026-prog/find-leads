@@ -12,8 +12,7 @@ export function getStorageProvider(): StorageProvider {
 
 export function isFirebaseReady(): boolean {
   return Boolean(
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
-      process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_PROJECT_ID &&
       process.env.FIREBASE_CLIENT_EMAIL &&
       process.env.FIREBASE_PRIVATE_KEY,
   );

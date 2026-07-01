@@ -19,6 +19,10 @@ web/*.tsbuildinfo
 *.pem
 logoWebPower.png~
 
+# Firebase service account keys (never commit)
+*-adminsdk-*.json
+firebase-adminsdk*.json
+
 # local user data
 web/data/users/
 web/data/users.json
