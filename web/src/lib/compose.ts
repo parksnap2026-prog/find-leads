@@ -36,8 +36,6 @@ async function fillTemplate(
     .replace(/\{\{NAME\}\}/g, vars.name)
     .replace(/\{\{CITY\}\}/g, vars.city)
     .replace(/\{\{TYPE\}\}/g, vars.type)
-    .replace(/\{\{PRODUCT_LINK\}\}/g, vars.productLink)
-    .replace(/\{\{PRODUCT_LABEL\}\}/g, vars.productLabel)
     .replace(/\[Your Name\]/g, fromName)
     .replace(/\[Your Company\]/g, companyName)
     .replace(/\[Your Email\]/g, fromEmail);
@@ -47,6 +45,11 @@ async function fillTemplate(
   if (userId) {
     out = applyContactToTemplate(out, ctx);
   }
+
+  // Product site links must stay fixed per template (webpower.blog / receptionsit.com).
+  out = out
+    .replace(/\{\{PRODUCT_LINK\}\}/g, vars.productLink)
+    .replace(/\{\{PRODUCT_LABEL\}\}/g, vars.productLabel);
 
   return out;
 }

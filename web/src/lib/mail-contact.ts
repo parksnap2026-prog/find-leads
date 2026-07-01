@@ -105,7 +105,6 @@ export function stripPhoneFromTemplate(text: string) {
 export function applyContactToTemplate(text: string, ctx: MailContactContext) {
   const baseUrl = getAppBaseUrl();
   const storeFullUrl = ctx.storeUrl ? `${baseUrl}${ctx.storeUrl}` : "";
-  const siteLink = ctx.website || storeFullUrl || (ctx.email ? `mailto:${ctx.email}` : "#");
   const year = String(new Date().getFullYear());
 
   let out = text
@@ -115,10 +114,7 @@ export function applyContactToTemplate(text: string, ctx: MailContactContext) {
     .replace(/\{\{STORE_URL\}\}/g, storeFullUrl);
 
   out = out.replace(/mailto:business@webpower\.blog/gi, ctx.email ? `mailto:${ctx.email}` : "#");
-  out = out.replace(/https?:\/\/webpower\.blog\/?/gi, siteLink);
-  out = out.replace(/(?<!@)webpower\.blog\/?/gi, ctx.website
-    ? ctx.website.replace(/^https?:\/\//, "")
-    : storeFullUrl.replace(/^https?:\/\//, "") || "mybusinessesleads.com");
+  // Do not replace webpower.blog / receptionsit.com here — {{PRODUCT_LINK}} is filled in after this step.
   out = out.replace(/The WebPower Team/g, ctx.businessName);
   out = out.replace(/WebPower Team/g, ctx.businessName);
   out = out.replace(/© 2025 WebPower/g, `© ${year} ${ctx.businessName}`);
