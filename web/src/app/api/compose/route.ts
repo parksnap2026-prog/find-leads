@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { readUserMailSettings } from "@/lib/db/local";
+import { getMailSettings } from "@/lib/db/user-mail";
 import { composeMessage } from "@/lib/compose";
 
 export async function POST(req: Request) {
@@ -16,8 +16,8 @@ export async function POST(req: Request) {
   }
 
   try {
-    const mail = readUserMailSettings(user.id);
-    const result = composeMessage(
+    const mail = await getMailSettings(user.id);
+    const result = await composeMessage(
       user.id,
       { template_id, name, business_type, city },
       mail,

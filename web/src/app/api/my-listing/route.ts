@@ -11,10 +11,10 @@ import {
 export async function GET() {
   try {
     const user = await requireUser();
-    const listing = readUserListing(user.id);
+    const listing = await readUserListing(user.id);
     return NextResponse.json({
       listing,
-      ...listListingPhotos(user.id),
+      ...(await listListingPhotos(user.id)),
     });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "City is required — pick location on map" }, { status: 400 });
     }
 
-    const listing = writeUserListing(user.id, {
+    const listing = await writeUserListing(user.id, {
       name,
       businessType: String(body.businessType ?? "hair_salon"),
       description: String(body.description ?? ""),
@@ -55,6 +55,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, listing });
   } catch (e) {
+    console.error("[my-listing POST]", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Save failed" },
       { status: 400 },
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
 export async function DELETE() {
   try {
     const user = await requireUser();
-    deleteUserListing(user.id);
+    await deleteUserListing(user.id);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

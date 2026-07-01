@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { readUserMailSettings } from "@/lib/db/local";
+import { getMailSettings } from "@/lib/db/user-mail";
 import { composeMessage } from "@/lib/compose";
 import { getMailContactContext } from "@/lib/mail-contact";
 
@@ -12,11 +12,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "template_id required" }, { status: 400 });
   }
 
-  const mail = readUserMailSettings(user.id);
-  const ctx = getMailContactContext(user.id, mail, user.name);
+  const mail = await getMailSettings(user.id);
+  const ctx = await getMailContactContext(user.id, mail, user.name);
 
   try {
-    const result = composeMessage(
+    const result = await composeMessage(
       user.id,
       {
         template_id,

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { readUserMailSettings } from "@/lib/db/local";
+import { getMailSettings } from "@/lib/db/user-mail";
 import { prependEmailLogs } from "@/lib/db/user-activity";
 import { sendUserMail } from "@/lib/mail";
 import type { EmailLogEntry } from "@/lib/db/types";
 
 export async function POST(req: Request) {
   const user = await requireUser();
-  const settings = readUserMailSettings(user.id);
+  const settings = await getMailSettings(user.id);
   if (!settings) {
     return NextResponse.json(
       { error: "Configure your mail settings first in Settings" },

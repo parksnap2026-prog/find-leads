@@ -1,7 +1,14 @@
 import fs from "fs";
 import path from "path";
+import { getStorageProvider, isFirebaseReady } from "@/lib/db";
+import * as firebaseListings from "@/lib/db/firebase-listings";
+import {
+  deleteUserFile,
+  readUserFile,
+  saveUserFile,
+} from "@/lib/db/firebase-storage";
 import { readUsersFile } from "@/lib/db/local";
-import { syncListingLogoToEmailLogo } from "@/lib/logo";
+import { saveUserLogo } from "@/lib/logo";
 import { normalizeWebsiteUrl } from "@/lib/website-url";
 import type { BusinessResult } from "@/types";
 
@@ -32,6 +39,10 @@ const MAX_GALLERY_PHOTOS = 6;
 
 export { normalizeWebsiteUrl as normalizeWebsite } from "@/lib/website-url";
 
+function useFirebaseStore(): boolean {
+  return getStorageProvider() === "firebase" && isFirebaseReady();
+}
+
 function userDir(userId: string) {
   return path.join(process.cwd(), "data", "users", userId);
 }
@@ -42,6 +53,10 @@ function listingDir(userId: string) {
 
 function listingPath(userId: string) {
   return path.join(userDir(userId), "listing.json");
+}
+
+function listingPhotoSubpath(filename: string) {
+  return `listing/${filename}`;
 }
 
 function normalizeListing(data: UserListing & { photos?: string[] }): UserListing {
@@ -55,15 +70,10 @@ function normalizeListing(data: UserListing & { photos?: string[] }): UserListin
     photos = rawPhotos.slice(1);
   }
 
-  return {
-    ...data,
-    coverPhoto,
-    logoPhoto,
-    photos,
-  };
+  return { ...data, coverPhoto, logoPhoto, photos };
 }
 
-export function readUserListing(userId: string): UserListing | null {
+function readUserListingLocal(userId: string): UserListing | null {
   try {
     const fp = listingPath(userId);
     if (!fs.existsSync(fp)) return null;
@@ -74,7 +84,15 @@ export function readUserListing(userId: string): UserListing | null {
   }
 }
 
-export function writeUserListing(
+export async function readUserListing(userId: string): Promise<UserListing | null> {
+  if (useFirebaseStore()) {
+    const listing = await firebaseListings.readListing(userId);
+    return listing ? normalizeListing(listing) : null;
+  }
+  return readUserListingLocal(userId);
+}
+
+export async function writeUserListing(
   userId: string,
   data: Omit<UserListing, "userId" | "updatedAt" | "coverPhoto" | "logoPhoto" | "photos"> & {
     coverPhoto?: string | null;
@@ -82,9 +100,7 @@ export function writeUserListing(
     photos?: string[];
   },
 ) {
-  const dir = userDir(userId);
-  fs.mkdirSync(dir, { recursive: true });
-  const existing = readUserListing(userId);
+  const existing = await readUserListing(userId);
   const listing: UserListing = {
     ...data,
     coverPhoto: data.coverPhoto ?? existing?.coverPhoto ?? null,
@@ -93,11 +109,23 @@ export function writeUserListing(
     userId,
     updatedAt: new Date().toISOString(),
   };
+
+  if (useFirebaseStore()) {
+    return firebaseListings.writeListing(listing);
+  }
+
+  const dir = userDir(userId);
+  fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(listingPath(userId), JSON.stringify(listing, null, 2), "utf-8");
   return listing;
 }
 
-export function deleteUserListing(userId: string) {
+export async function deleteUserListing(userId: string) {
+  if (useFirebaseStore()) {
+    await firebaseListings.deleteListing(userId);
+    return;
+  }
+
   const fp = listingPath(userId);
   if (fs.existsSync(fp)) fs.unlinkSync(fp);
   const dir = listingDir(userId);
@@ -108,8 +136,26 @@ export function listingPhotoPath(userId: string, filename: string) {
   return path.join(listingDir(userId), filename);
 }
 
-export function listListingPhotos(userId: string) {
-  const listing = readUserListing(userId);
+export async function readListingPhoto(
+  userId: string,
+  filename: string,
+): Promise<{ buffer: Buffer; mime: string } | null> {
+  if (useFirebaseStore()) {
+    const buffer = await readUserFile(userId, listingPhotoSubpath(filename));
+    if (!buffer) return null;
+    return { buffer, mime: photoMime(filename) };
+  }
+
+  const filepath = listingPhotoPath(userId, filename);
+  if (!fs.existsSync(filepath)) return null;
+  return {
+    buffer: fs.readFileSync(filepath),
+    mime: photoMime(filepath),
+  };
+}
+
+export async function listListingPhotos(userId: string) {
+  const listing = await readUserListing(userId);
   return {
     coverPhoto: listing?.coverPhoto ?? null,
     logoPhoto: listing?.logoPhoto ?? null,
@@ -125,21 +171,35 @@ export function photoMime(filepath: string) {
   return "image/png";
 }
 
-function saveListing(listing: UserListing) {
+async function saveListing(listing: UserListing) {
+  if (useFirebaseStore()) {
+    await firebaseListings.writeListing(listing);
+    return;
+  }
   fs.writeFileSync(listingPath(listing.userId), JSON.stringify(listing, null, 2), "utf-8");
 }
 
-function writeImageFile(userId: string, buffer: Buffer, mime: string, prefix: string) {
-  const dir = listingDir(userId);
-  fs.mkdirSync(dir, { recursive: true });
+async function writeImageFile(userId: string, buffer: Buffer, mime: string, prefix: string) {
   const ext = mime === "image/jpeg" ? ".jpg" : mime === "image/webp" ? ".webp" : ".png";
   const filename = `${prefix}-${Date.now()}${ext}`;
+
+  if (useFirebaseStore()) {
+    await saveUserFile(userId, listingPhotoSubpath(filename), buffer, mime);
+    return filename;
+  }
+
+  const dir = listingDir(userId);
+  fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, filename), buffer);
   return filename;
 }
 
-function deleteImageFile(userId: string, filename: string | null) {
+async function deleteImageFile(userId: string, filename: string | null) {
   if (!filename) return;
+  if (useFirebaseStore()) {
+    await deleteUserFile(userId, listingPhotoSubpath(filename));
+    return;
+  }
   const fp = listingPhotoPath(userId, filename);
   if (fs.existsSync(fp)) fs.unlinkSync(fp);
 }
@@ -152,13 +212,19 @@ function listingUsesFile(listing: UserListing, filename: string) {
   );
 }
 
-export function addListingPhoto(
+async function syncListingLogoToEmailLogo(userId: string, listingLogoFilename: string) {
+  const photo = await readListingPhoto(userId, listingLogoFilename);
+  if (!photo) return;
+  await saveUserLogo(userId, photo.buffer, photo.mime);
+}
+
+export async function addListingPhoto(
   userId: string,
   buffer: Buffer,
   mime: string,
   kind: ListingPhotoKind,
 ) {
-  const listing = readUserListing(userId);
+  const listing = await readUserListing(userId);
   if (!listing) throw new Error("Save your store details first");
 
   if (kind === "gallery" && listing.photos.length >= MAX_GALLERY_PHOTOS) {
@@ -166,47 +232,51 @@ export function addListingPhoto(
   }
 
   const prefix = kind === "cover" ? "cover" : kind === "logo" ? "logo" : "photo";
-  const filename = writeImageFile(userId, buffer, mime, prefix);
+  const filename = await writeImageFile(userId, buffer, mime, prefix);
 
   if (kind === "cover") {
-    deleteImageFile(userId, listing.coverPhoto);
+    await deleteImageFile(userId, listing.coverPhoto);
     listing.coverPhoto = filename;
   } else if (kind === "logo") {
-    deleteImageFile(userId, listing.logoPhoto);
+    await deleteImageFile(userId, listing.logoPhoto);
     listing.logoPhoto = filename;
-    syncListingLogoToEmailLogo(userId, filename);
+    await syncListingLogoToEmailLogo(userId, filename);
   } else {
     listing.photos.push(filename);
   }
 
-  saveListing(listing);
+  await saveListing(listing);
   return filename;
 }
 
-export function setLogoFromGallery(userId: string, filename: string) {
-  const listing = readUserListing(userId);
+export async function setLogoFromGallery(userId: string, filename: string) {
+  const listing = await readUserListing(userId);
   if (!listing) throw new Error("Save your store details first");
   if (!listing.photos.includes(filename) && listing.coverPhoto !== filename) {
     throw new Error("Pick a photo from your cover or gallery");
   }
   listing.logoPhoto = filename;
-  syncListingLogoToEmailLogo(userId, filename);
-  saveListing(listing);
+  await syncListingLogoToEmailLogo(userId, filename);
+  await saveListing(listing);
 }
 
-export function clearListingLogo(userId: string) {
-  const listing = readUserListing(userId);
+export async function clearListingLogo(userId: string) {
+  const listing = await readUserListing(userId);
   if (!listing?.logoPhoto) return;
   const logo = listing.logoPhoto;
   listing.logoPhoto = null;
   if (!listingUsesFile({ ...listing, logoPhoto: null }, logo)) {
-    deleteImageFile(userId, logo);
+    await deleteImageFile(userId, logo);
   }
-  saveListing(listing);
+  await saveListing(listing);
 }
 
-export function removeListingPhoto(userId: string, filename: string, kind?: ListingPhotoKind) {
-  const listing = readUserListing(userId);
+export async function removeListingPhoto(
+  userId: string,
+  filename: string,
+  kind?: ListingPhotoKind,
+) {
+  const listing = await readUserListing(userId);
   if (!listing) return;
 
   if (!kind || kind === "cover") {
@@ -219,17 +289,21 @@ export function removeListingPhoto(userId: string, filename: string, kind?: List
     listing.photos = listing.photos.filter((p) => p !== filename);
   }
 
-  saveListing(listing);
+  await saveListing(listing);
   if (!listingUsesFile(listing, filename)) {
-    deleteImageFile(userId, filename);
+    await deleteImageFile(userId, filename);
   }
 }
 
-export function loadAllPublishedListings(): UserListing[] {
+async function loadAllPublishedListings(): Promise<UserListing[]> {
+  if (useFirebaseStore()) {
+    return firebaseListings.loadPublishedListings();
+  }
+
   const { users } = readUsersFile();
   const out: UserListing[] = [];
   for (const user of users) {
-    const listing = readUserListing(user.id);
+    const listing = readUserListingLocal(user.id);
     if (listing?.published) out.push(listing);
   }
   return out;
@@ -241,12 +315,13 @@ function cityMatch(a: string, b: string) {
   return x.includes(y) || y.includes(x);
 }
 
-export function searchListings(
+export async function searchListings(
   country: string,
   city: string,
   business_type: string,
-): BusinessResult[] {
-  return loadAllPublishedListings()
+): Promise<BusinessResult[]> {
+  const published = await loadAllPublishedListings();
+  return published
     .filter((l) => {
       if (l.countryCode.toLowerCase() !== country.toLowerCase()) return false;
       if (!cityMatch(l.city, city)) return false;

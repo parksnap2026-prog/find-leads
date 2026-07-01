@@ -1,33 +1,35 @@
-import fs from "fs";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { listingPhotoPath, photoMime, readUserListing } from "@/lib/listings";
+import { photoMime, readListingPhoto, readUserListing } from "@/lib/listings";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ filename: string }> },
+  ctx: { params: Promise<{ filename: string }> },
 ) {
   try {
     const user = await requireUser();
-    const { filename } = await params;
-    const listing = readUserListing(user.id);
-    const owned =
+    const { filename } = await ctx.params;
+    const listing = await readUserListing(user.id);
+    const allowed =
       listing?.coverPhoto === filename ||
       listing?.logoPhoto === filename ||
       listing?.photos.includes(filename);
-    if (!owned) {
-      return new NextResponse("Not found", { status: 404 });
+    if (!allowed) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const filepath = listingPhotoPath(user.id, filename);
-    if (!fs.existsSync(filepath)) return new NextResponse("Not found", { status: 404 });
-    const buffer = fs.readFileSync(filepath);
-    return new NextResponse(buffer, {
+
+    const photo = await readListingPhoto(user.id, filename);
+    if (!photo) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    return new NextResponse(new Uint8Array(photo.buffer), {
       headers: {
-        "Content-Type": photoMime(filepath),
-        "Cache-Control": "private, no-cache",
+        "Content-Type": photo.mime,
+        "Cache-Control": "private, max-age=3600",
       },
     });
   } catch {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

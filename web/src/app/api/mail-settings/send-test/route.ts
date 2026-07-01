@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { readUserMailSettings } from "@/lib/db/local";
+import { getMailSettings } from "@/lib/db/user-mail";
 import { prependEmailLogs } from "@/lib/db/user-activity";
 import { composeMessage } from "@/lib/compose";
 import { getMailContactContext, resolveMailFromFields } from "@/lib/mail-contact";
@@ -9,9 +9,9 @@ import { sendSmtpPing, sendUserMail } from "@/lib/mail";
 export async function POST(req: Request) {
   const user = await requireUser();
   const body = await req.json();
-  const existing = readUserMailSettings(user.id);
+  const existing = await getMailSettings(user.id);
 
-  const settings = resolveMailFromFields(
+  const settings = await resolveMailFromFields(
     user.id,
     {
       server: String(body.server ?? existing?.server ?? "").trim(),
@@ -55,10 +55,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Test recipient email required" }, { status: 400 });
   }
 
-  const ctx = getMailContactContext(user.id, settings, user.name);
+  const ctx = await getMailContactContext(user.id, settings, user.name);
 
   try {
-    const composed = composeMessage(
+    const composed = await composeMessage(
       user.id,
       {
         template_id,

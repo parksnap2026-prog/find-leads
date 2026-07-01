@@ -25,7 +25,7 @@ With `STORAGE_PROVIDER=local` on Vercel, **all** local data is lost on redeploy.
 ## Firebase setup
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).
-2. Enable **Firestore** (Native mode).
+2. Enable **Firestore** (Native mode) and **Storage**.
 3. Project settings → Service accounts → **Generate new private key**.
 4. Set env vars in Vercel (see below) and set `STORAGE_PROVIDER=firebase`.
 5. Deploy security rules:
@@ -43,6 +43,8 @@ users/{userId}/searchHistory/{entryId}
 users/{userId}/callActivity/{entryId}
 users/{userId}/emailLogs/{entryId}
 users/{userId}/prefs/callLog
+users/{userId}/prefs/mail
+stores/{userId}
 ```
 
 Client access is denied in `firestore.rules` — only the server (Admin SDK) reads/writes.

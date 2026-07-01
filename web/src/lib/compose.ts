@@ -1,9 +1,14 @@
 import { BUSINESS_TYPES } from "./constants";
 import { loadUserTemplate } from "./user-templates";
-import { applyContactToTemplate, ensureEmailSignature, getMailContactContext, stripPhoneFromTemplate } from "./mail-contact";
+import {
+  applyContactToTemplate,
+  ensureEmailSignature,
+  getMailContactContext,
+  stripPhoneFromTemplate,
+} from "./mail-contact";
 import type { MailSettings } from "./db/types";
 
-function fillTemplate(
+async function fillTemplate(
   text: string,
   vars: { name: string; city: string; type: string },
   mail?: MailSettings | null,
@@ -11,7 +16,7 @@ function fillTemplate(
   userName?: string,
 ) {
   const ctx = userId
-    ? getMailContactContext(userId, mail, userName)
+    ? await getMailContactContext(userId, mail, userName)
     : {
         businessName: mail?.fromName || "MyBusinessesLeads",
         email: mail?.user || "",
@@ -43,7 +48,7 @@ function fillTemplate(
   return out;
 }
 
-export function composeMessage(
+export async function composeMessage(
   userId: string,
   input: {
     template_id: string;
@@ -59,7 +64,6 @@ export function composeMessage(
   if (!tpl) throw new Error("Template not found");
 
   const typeLabel = (BUSINESS_TYPES[input.business_type] || input.business_type).toLowerCase();
-  // Always use the template body edited in Templates → default (not hidden category variants).
   const content = tpl.default;
 
   const vars = {
@@ -71,7 +75,7 @@ export function composeMessage(
   const uid = contactUserId ?? userId;
 
   return {
-    subject: fillTemplate(content.subject || "", vars, mail, uid, userName),
-    body: fillTemplate(content.body || "", vars, mail, uid, userName),
+    subject: await fillTemplate(content.subject || "", vars, mail, uid, userName),
+    body: await fillTemplate(content.body || "", vars, mail, uid, userName),
   };
 }

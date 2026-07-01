@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import {
   deleteUserLogo,
-  logoFileVersion,
   saveUserLogo,
   userHasLogo,
 } from "@/lib/logo";
@@ -11,15 +10,14 @@ import { logoPreviewUrl } from "@/lib/logo-preview";
 export async function GET() {
   try {
     const user = await requireUser();
-    const hasLogo = userHasLogo(user.id);
+    const hasLogo = await userHasLogo(user.id);
     if (!hasLogo) {
       return NextResponse.json({ hasLogo: false });
     }
-    const version = logoFileVersion(user.id);
     return NextResponse.json({
       hasLogo: true,
-      url: logoPreviewUrl(undefined, version),
-      version,
+      url: logoPreviewUrl(undefined, Date.now()),
+      version: Date.now(),
     });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -48,23 +46,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Logo must be under 2 MB" }, { status: 400 });
     }
 
-    saveUserLogo(user.id, buffer, mime);
-    const version = logoFileVersion(user.id);
+    await saveUserLogo(user.id, buffer, mime);
+    const version = Date.now();
     return NextResponse.json({
       ok: true,
       hasLogo: true,
       url: logoPreviewUrl(undefined, version),
       version,
     });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Upload failed" },
+      { status: 400 },
+    );
   }
 }
 
 export async function DELETE() {
   try {
     const user = await requireUser();
-    deleteUserLogo(user.id);
+    await deleteUserLogo(user.id);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,6 +1,6 @@
-import { readUserMailSettings } from "@/lib/db/local";
+import { getMailSettings } from "@/lib/db/user-mail";
 import type { MailSettings } from "@/lib/db/types";
-import { normalizeWebsite, readUserListing } from "@/lib/listings";
+import { normalizeWebsite } from "@/lib/listings";
 
 export interface MailContactContext {
   businessName: string;
@@ -22,13 +22,14 @@ export function getAppBaseUrl() {
   return "http://localhost:3000";
 }
 
-export function getMailContactContext(
+export async function getMailContactContext(
   userId: string,
   mail?: MailSettings | null,
   userName?: string,
-): MailContactContext {
-  const listing = readUserListing(userId);
-  const saved = mail ?? readUserMailSettings(userId);
+): Promise<MailContactContext> {
+  const { readUserListing } = await import("@/lib/listings");
+  const listing = await readUserListing(userId);
+  const saved = mail ?? (await getMailSettings(userId));
 
   const businessName =
     listing?.name?.trim() ||
@@ -86,7 +87,7 @@ export function ensureEmailSignature(html: string) {
 }
 
 export function stripPhoneFromTemplate(text: string) {
-  let out = text
+  const out = text
     .replace(
       /<a\s+[^>]*href=["']tel:[^"']*["'][^>]*>[\s\S]*?<\/a>\s*(?:&nbsp;\s*)*·\s*(?:&nbsp;\s*)*/gi,
       "",
@@ -126,12 +127,12 @@ export function applyContactToTemplate(text: string, ctx: MailContactContext) {
   return stripPhoneFromTemplate(out);
 }
 
-export function resolveMailFromFields(
+export async function resolveMailFromFields(
   userId: string,
   settings: MailSettings,
   userName?: string,
-): MailSettings {
-  const ctx = getMailContactContext(userId, settings, userName);
+): Promise<MailSettings> {
+  const ctx = await getMailContactContext(userId, settings, userName);
   return {
     ...settings,
     fromName: settings.fromName.trim() || ctx.businessName,

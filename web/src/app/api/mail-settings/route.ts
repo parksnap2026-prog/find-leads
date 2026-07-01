@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import {
-  readUserMailSettings,
-  writeUserMailSettings,
-} from "@/lib/db/local";
+import { getMailSettings, saveMailSettings } from "@/lib/db/user-mail";
 import { getMailContactContext, resolveMailFromFields } from "@/lib/mail-contact";
 import { testMailSettings } from "@/lib/mail";
 import type { MailSettings } from "@/lib/db/types";
@@ -13,7 +10,7 @@ function buildSettings(
   body: Record<string, unknown>,
   existing: MailSettings | null,
   userName: string,
-): MailSettings {
+): Promise<MailSettings> {
   return resolveMailFromFields(
     userId,
     {
@@ -30,8 +27,8 @@ function buildSettings(
 
 export async function GET() {
   const user = await requireUser();
-  const settings = readUserMailSettings(user.id);
-  const contact = getMailContactContext(user.id, settings, user.name);
+  const settings = await getMailSettings(user.id);
+  const contact = await getMailContactContext(user.id, settings, user.name);
 
   if (!settings) {
     return NextResponse.json({
@@ -59,9 +56,9 @@ export async function GET() {
 export async function POST(req: Request) {
   const user = await requireUser();
   const body = await req.json();
-  const existing = readUserMailSettings(user.id);
+  const existing = await getMailSettings(user.id);
 
-  const settings = buildSettings(user.id, body, existing, user.name);
+  const settings = await buildSettings(user.id, body, existing, user.name);
 
   if (!settings.server || !settings.user || !settings.pass) {
     return NextResponse.json(
@@ -74,7 +71,7 @@ export async function POST(req: Request) {
     try {
       const pingTo = String(body.pingTo ?? settings.user).trim();
       const ping = await testMailSettings(settings, pingTo);
-      writeUserMailSettings(user.id, settings);
+      await saveMailSettings(user.id, settings);
       return NextResponse.json({
         ok: true,
         pingSent: true,
@@ -90,6 +87,6 @@ export async function POST(req: Request) {
     }
   }
 
-  writeUserMailSettings(user.id, settings);
+  await saveMailSettings(user.id, settings);
   return NextResponse.json({ ok: true });
 }

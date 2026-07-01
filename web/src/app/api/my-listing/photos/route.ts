@@ -13,7 +13,7 @@ import {
 export async function GET() {
   try {
     const user = await requireUser();
-    return NextResponse.json(listListingPhotos(user.id));
+    return NextResponse.json(await listListingPhotos(user.id));
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -22,7 +22,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const user = await requireUser();
-    if (!readUserListing(user.id)) {
+    if (!(await readUserListing(user.id))) {
       return NextResponse.json(
         { error: "Save your store details first, then upload photos" },
         { status: 400 },
@@ -34,8 +34,8 @@ export async function POST(req: Request) {
     const useAsLogo = searchParams.get("useAsLogo");
 
     if (useAsLogo) {
-      setLogoFromGallery(user.id, useAsLogo);
-      return NextResponse.json({ ok: true, ...listListingPhotos(user.id) });
+      await setLogoFromGallery(user.id, useAsLogo);
+      return NextResponse.json({ ok: true, ...(await listListingPhotos(user.id)) });
     }
 
     if (!["cover", "logo", "gallery"].includes(kind)) {
@@ -56,8 +56,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Photo must be under 4 MB" }, { status: 400 });
     }
 
-    const filename = addListingPhoto(user.id, buffer, mime, kind);
-    return NextResponse.json({ ok: true, filename, ...listListingPhotos(user.id) });
+    const filename = await addListingPhoto(user.id, buffer, mime, kind);
+    return NextResponse.json({ ok: true, filename, ...(await listListingPhotos(user.id)) });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Upload failed" },
@@ -75,13 +75,13 @@ export async function DELETE(req: Request) {
     const clearLogo = searchParams.get("clearLogo");
 
     if (clearLogo === "1") {
-      clearListingLogo(user.id);
-      return NextResponse.json({ ok: true, ...listListingPhotos(user.id) });
+      await clearListingLogo(user.id);
+      return NextResponse.json({ ok: true, ...(await listListingPhotos(user.id)) });
     }
 
     if (!filename) return NextResponse.json({ error: "file required" }, { status: 400 });
-    removeListingPhoto(user.id, filename, kind ?? undefined);
-    return NextResponse.json({ ok: true, ...listListingPhotos(user.id) });
+    await removeListingPhoto(user.id, filename, kind ?? undefined);
+    return NextResponse.json({ ok: true, ...(await listListingPhotos(user.id)) });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

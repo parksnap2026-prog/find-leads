@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   }
 
   const result = await runSearch({ country, city, business_type, radius, scope_tags });
-  const listings = searchListings(country, city, business_type);
+  const listings = await searchListings(country, city, business_type);
   const merged = [...listings, ...result.results];
   const seen = new Set<string>();
   const deduped = merged.filter((r) => {

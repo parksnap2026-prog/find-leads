@@ -56,13 +56,13 @@ export async function sendUserMail(
     body: string;
   },
 ) {
-  const resolved = resolveMailFromFields(userId, settings);
+  const resolved = await resolveMailFromFields(userId, settings);
   const transporter = createMailTransport(resolved);
   const fromAddr = smtpFromAddress(resolved);
 
   const isHtml = input.body.trimStart().startsWith("<");
   const results: Record<string, string> = {};
-  const logoAsset = readUserLogoBuffer(userId);
+  const logoAsset = await readUserLogoBuffer(userId);
 
   const domain = smtpMessageDomain(resolved);
 

@@ -6,7 +6,7 @@ import { readUserLogoDataUrl } from "@/lib/logo";
 export async function GET() {
   try {
     const user = await requireUser();
-    const dataUrl = readUserLogoDataUrl(user.id);
+    const dataUrl = await readUserLogoDataUrl(user.id);
     if (!dataUrl) {
       return NextResponse.json({ hasLogo: false });
     }
