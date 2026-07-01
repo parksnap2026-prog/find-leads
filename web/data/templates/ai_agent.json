@@ -5,7 +5,7 @@
   "color": "#f59e0b",
   "default": {
     "subject": "AI assistant for {{NAME}} — free demo",
-    "body": "<p>Hi {{NAME}},</p>\n<p>I came across {{NAME}} in {{CITY}} and thought this might be useful for you.</p>\n<p>We set up a 24/7 AI chat agent that answers customer questions, captures enquiries, and can book appointments — even outside business hours.</p>\n<p>We can show you a free demo on your site with no commitment. Just reply if you'd like to see how it works.</p>\n<p>Best regards,<br>[Your Name]</p>\n<p><a href=\"{{PRODUCT_LINK}}\">{{PRODUCT_LABEL}}</a></p>"
+    "body": "<p>Hi {{NAME}},</p>\n<p>I came across {{NAME}} in {{CITY}} and thought this might be useful for you.</p>\n<p>We set up a 24/7 AI chat agent that answers customer questions, captures enquiries, and can book appointments — even outside business hours.</p>\n<p>We can show you a free demo on your site with no commitment. Just reply if you'd like to see how it works.</p>\n<p>Best regards,</p>\n<p><a href=\"{{PRODUCT_LINK}}\">{{PRODUCT_LABEL}}</a></p>"
   },
   "variants": {}
 }
